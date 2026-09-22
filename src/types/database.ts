@@ -74,6 +74,7 @@ export interface MovementFilters {
   creditCardId?: number;
   type?: TransactionType | 'ALL';
   search?: string;
+  excludeSearch?: string;
 }
 
 export interface DashboardData {

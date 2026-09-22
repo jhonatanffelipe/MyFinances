@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Plus, RotateCcw, Calendar, FileSpreadsheet } from 'lucide-react';
+import { Search, Plus, RotateCcw, Calendar, FileSpreadsheet, Ban } from 'lucide-react';
 import {
   TextField,
   MenuItem,
@@ -10,6 +10,7 @@ import {
   Button,
   Paper,
   InputAdornment,
+  IconButton,
 } from '@mui/material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import dayjs from 'dayjs';
@@ -53,29 +54,50 @@ export function MovementFilters({
       creditCardId: undefined,
       type: 'ALL',
       search: '',
+      excludeSearch: '',
     });
   };
 
   return (
     <Paper className="p-4 border border-slate-100 shadow-sm rounded-2xl bg-white space-y-4">
-      {/* Top Bar: Search Input + Nova Transação Button */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-        <div className="w-full sm:w-96">
-          <TextField
-            size="small"
-            fullWidth
-            placeholder="Buscar por descrição ou anotação..."
-            value={filters.search || ''}
-            onChange={(e) => onFilterChange({ ...filters, search: e.target.value })}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <Search className="w-4 h-4 text-slate-400" />
-                </InputAdornment>
-              ),
-              className: 'rounded-xl bg-slate-50/70 text-xs',
-            }}
-          />
+      {/* Top Bar: Search Inputs + Botões de Ação */}
+      <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
+        <div className="flex flex-col sm:flex-row items-center gap-2 flex-1 max-w-2xl">
+          <div className="w-full sm:flex-1">
+            <TextField
+              size="small"
+              fullWidth
+              placeholder="Buscar por descrição ou anotação..."
+              value={filters.search || ''}
+              onChange={(e) => onFilterChange({ ...filters, search: e.target.value })}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <Search className="w-4 h-4 text-slate-400" />
+                  </InputAdornment>
+                ),
+                className: 'rounded-xl bg-slate-50/70 text-xs',
+              }}
+            />
+          </div>
+
+          <div className="w-full sm:flex-1">
+            <TextField
+              size="small"
+              fullWidth
+              placeholder="Desconsiderar termo..."
+              value={filters.excludeSearch || ''}
+              onChange={(e) => onFilterChange({ ...filters, excludeSearch: e.target.value })}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <Ban className="w-4 h-4 text-rose-400" />
+                  </InputAdornment>
+                ),
+                className: 'rounded-xl bg-slate-50/70 text-xs',
+              }}
+            />
+          </div>
         </div>
 
         <div className="flex items-center gap-2 self-stretch sm:self-auto">

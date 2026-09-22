@@ -21,6 +21,8 @@ export interface UseImportMovementsReturn {
   clearSuccessMessage: () => void;
   filterText: string;
   setFilterText: (text: string) => void;
+  excludeText: string;
+  setExcludeText: (text: string) => void;
   statusFilter: StatusFilter;
   setStatusFilter: (status: StatusFilter) => void;
 

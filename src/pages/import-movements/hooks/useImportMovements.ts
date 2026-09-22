@@ -18,6 +18,7 @@ export function useImportMovements(): UseImportMovementsReturn {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const [filterText, setFilterText] = useState<string>('');
+  const [excludeText, setExcludeText] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL');
 
   // Carrega categorias e cartões de crédito ao iniciar
@@ -166,13 +167,19 @@ export function useImportMovements(): UseImportMovementsReturn {
     );
   };
 
-  // Filtra itens com base no texto de busca e status
+  // Filtra itens com base no texto de busca, exclusão e status
   const filteredItems = useMemo(() => {
     const search = filterText.trim().toLowerCase();
+    const exclude = excludeText.trim().toLowerCase();
 
     return items.filter((item) => {
-      // Filtro de texto
+      // Filtro de texto (inclusão)
       if (search && !item.description.toLowerCase().includes(search)) {
+        return false;
+      }
+
+      // Filtro de texto (exclusão)
+      if (exclude && item.description.toLowerCase().includes(exclude)) {
         return false;
       }
 
@@ -191,7 +198,7 @@ export function useImportMovements(): UseImportMovementsReturn {
           return true;
       }
     });
-  }, [items, filterText, statusFilter]);
+  }, [items, filterText, excludeText, statusFilter]);
 
   // Ações de seleção em massa sobre itens visíveis
   const handleSelectAllVisible = () => {
@@ -334,6 +341,8 @@ export function useImportMovements(): UseImportMovementsReturn {
     clearSuccessMessage: () => setSuccessMessage(null),
     filterText,
     setFilterText,
+    excludeText,
+    setExcludeText,
     statusFilter,
     setStatusFilter,
 

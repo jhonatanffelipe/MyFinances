@@ -36,6 +36,8 @@ export function ImportMovementsPage() {
     clearSuccessMessage,
     filterText,
     setFilterText,
+    excludeText,
+    setExcludeText,
     statusFilter,
     setStatusFilter,
     totalItemsCount,
@@ -185,6 +187,8 @@ export function ImportMovementsPage() {
             onInvoiceDateChange={setInvoiceDate}
             filterText={filterText}
             onFilterTextChange={setFilterText}
+            excludeText={excludeText}
+            onExcludeTextChange={setExcludeText}
             statusFilter={statusFilter}
             onStatusFilterChange={setStatusFilter}
             categories={categories}

@@ -8,6 +8,7 @@ import {
   CreditCard as CreditCardIcon,
   X,
   Filter,
+  Ban,
 } from 'lucide-react';
 import {
   TextField,
@@ -35,6 +36,8 @@ interface ImportFiltersBarProps {
   onInvoiceDateChange: (date: string) => void;
   filterText: string;
   onFilterTextChange: (text: string) => void;
+  excludeText: string;
+  onExcludeTextChange: (text: string) => void;
   statusFilter: StatusFilter;
   onStatusFilterChange: (status: StatusFilter) => void;
   categories: Category[];
@@ -59,6 +62,8 @@ export function ImportFiltersBar({
   onInvoiceDateChange,
   filterText,
   onFilterTextChange,
+  excludeText,
+  onExcludeTextChange,
   statusFilter,
   onStatusFilterChange,
   categories,
@@ -96,7 +101,7 @@ export function ImportFiltersBar({
       {/* Top Row: Cartão de Crédito + Data dos Movimentos + Busca por Texto */}
       <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
         {/* Seletor de Cartão */}
-        <div className="md:col-span-4">
+        <div className="md:col-span-3">
           <FormControl fullWidth size="small">
             <InputLabel id="credit-card-select-label">
               Cartão de Crédito de Origem
@@ -159,7 +164,7 @@ export function ImportFiltersBar({
         </div>
 
         {/* Campo de Busca de Estabelecimentos */}
-        <div className="md:col-span-5">
+        <div className="md:col-span-3">
           <TextField
             size="small"
             fullWidth
@@ -176,6 +181,33 @@ export function ImportFiltersBar({
               endAdornment: filterText ? (
                 <InputAdornment position="end">
                   <IconButton size="small" onClick={() => onFilterTextChange('')}>
+                    <X className="w-3.5 h-3.5 text-slate-400" />
+                  </IconButton>
+                </InputAdornment>
+              ) : null,
+              className: 'rounded-xl bg-slate-50/60 text-xs',
+            }}
+          />
+        </div>
+
+        {/* Campo para Desconsiderar Estabelecimentos */}
+        <div className="md:col-span-3">
+          <TextField
+            size="small"
+            fullWidth
+            label="Desconsiderar Termo"
+            placeholder="Ex: Pagamento, IOF..."
+            value={excludeText}
+            onChange={(e) => onExcludeTextChange(e.target.value)}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <Ban className="w-4 h-4 text-rose-400" />
+                </InputAdornment>
+              ),
+              endAdornment: excludeText ? (
+                <InputAdornment position="end">
+                  <IconButton size="small" onClick={() => onExcludeTextChange('')}>
                     <X className="w-3.5 h-3.5 text-slate-400" />
                   </IconButton>
                 </InputAdornment>

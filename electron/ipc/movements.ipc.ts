@@ -18,7 +18,7 @@ export const MOVEMENT_SELECT = `
 export function registerMovementsIpc() {
   ipcMain.handle(IPC_CHANNELS.MOVEMENTS_LIST, async (_event, filters: any = {}) => {
     const {
-      startDate, endDate, categoryId, creditCardId, type, search,
+      startDate, endDate, categoryId, creditCardId, type, search, excludeSearch,
       page = 0, perPage = 25, orderField = 'date', orderDirection = 'desc',
     } = filters || {};
 
@@ -36,6 +36,10 @@ export function registerMovementsIpc() {
     if (search) {
       conditions.push('(m.description LIKE ? OR m.notes LIKE ?)');
       params.push(`%${search}%`, `%${search}%`);
+    }
+    if (excludeSearch) {
+      conditions.push('(m.description NOT LIKE ? AND (m.notes IS NULL OR m.notes NOT LIKE ?))');
+      params.push(`%${excludeSearch}%`, `%${excludeSearch}%`);
     }
 
     const whereClause = conditions.join(' AND ');
