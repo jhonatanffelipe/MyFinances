@@ -39,6 +39,7 @@ export function createMainWindow(): BrowserWindow {
     title: 'MyFinances - Controle Financeiro Pessoal',
     icon: iconPath,
     autoHideMenuBar: true,
+    show: false,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: false,
@@ -47,6 +48,8 @@ export function createMainWindow(): BrowserWindow {
   });
 
   mainWindow.removeMenu();
+  mainWindow.maximize();
+  mainWindow.show();
 
   if (iconPath) {
     try {
