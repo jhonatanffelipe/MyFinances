@@ -98,7 +98,7 @@ export function ImportFiltersBar({
         {/* Seletor de Cartão */}
         <div className="md:col-span-4">
           <FormControl fullWidth size="small">
-            <InputLabel id="credit-card-select-label" className="text-xs">
+            <InputLabel id="credit-card-select-label">
               Cartão de Crédito de Origem
             </InputLabel>
             <Select
@@ -150,14 +150,8 @@ export function ImportFiltersBar({
               textField: {
                 size: 'small',
                 fullWidth: true,
-                helperText: invoiceDate
-                  ? 'Data aplicada a todos os lançamentos'
-                  : 'Vazia: mantém data da compra',
                 InputProps: {
                   className: 'rounded-xl bg-slate-50/60 text-xs',
-                },
-                FormHelperTextProps: {
-                  className: 'text-[10px] text-slate-400 mt-0.5',
                 },
               },
             }}
@@ -169,7 +163,8 @@ export function ImportFiltersBar({
           <TextField
             size="small"
             fullWidth
-            placeholder="Filtrar lançamentos por nome (ex: Uber, Pix, Decathlon)..."
+            label="Buscar por Nome"
+            placeholder="Ex: Uber, Pix, Decathlon..."
             value={filterText}
             onChange={(e) => onFilterTextChange(e.target.value)}
             InputProps={{
@@ -185,7 +180,7 @@ export function ImportFiltersBar({
                   </IconButton>
                 </InputAdornment>
               ) : null,
-              className: 'rounded-xl bg-slate-50/70 text-xs',
+              className: 'rounded-xl bg-slate-50/60 text-xs',
             }}
           />
         </div>
