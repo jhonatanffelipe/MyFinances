@@ -1,0 +1,70 @@
+@import '@fontsource/nunito/400.css';
+@import '@fontsource/nunito/500.css';
+@import '@fontsource/nunito/600.css';
+@import '@fontsource/nunito/700.css';
+@import '@fontsource/nunito/800.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  font-family: 'Nunito', sans-serif;
+
+  /* Tokens do design (Figma - MyFinances) */
+  --color-brand: #10b981;
+  --color-brand-dark: #059669;
+  --color-ink: #0f172a;
+  --color-ink-soft: #1e293b;
+  --color-ink-muted: #475569;
+  --color-ink-faint: #94a3b8;
+  --color-line: #e2e8f0;
+  --color-canvas: #f8fafc;
+  --color-danger: #ef4444;
+  --shadow-card: 0 4px 8px rgba(0, 0, 0, 0.04);
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--color-canvas);
+  color: var(--color-ink);
+  overflow-x: hidden;
+}
+
+@layer components {
+  /* Cartão branco padrão do design: raio 16, sombra suave, sem borda */
+  .surface-card {
+    @apply bg-white rounded-card shadow-card;
+  }
+
+  /* Título + subtítulo usados no topo de cada bloco */
+  .card-title {
+    @apply text-base font-bold text-ink;
+  }
+
+  .card-subtitle {
+    @apply text-xs font-normal text-ink-muted;
+  }
+
+  /* Cabeçalho de coluna das tabelas */
+  .table-head-cell {
+    @apply text-xs font-semibold text-ink-muted;
+  }
+}
+
+/* Barras de rolagem alinhadas à paleta */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-canvas);
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-ink-faint);
+}

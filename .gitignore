@@ -1,0 +1,43 @@
+# Dependências
+node_modules/
+.pnp
+.pnp.js
+
+# Builds e Distribuição
+dist/
+dist-electron/
+out/
+release/
+*.exe
+*.zip
+*.dmg
+*.AppImage
+
+# Bancos de dados e dados locais
+*.sqlite
+*.sqlite3
+*.db
+db_myfinances.sqlite
+*.log
+
+# Variáveis de ambiente
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# IDEs e Editores
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Sistema operacional
+.DS_Store
+Thumbs.db
