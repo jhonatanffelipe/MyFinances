@@ -103,6 +103,11 @@ export interface DashboardData {
     color: string;
   }>;
   upcomingFixedExpenses: Array<FixedExpense & { formattedDueDate: string }>;
+  fixedExpensesHistory: Array<{
+    month: string;
+    yearMonth: string;
+    value: number;
+  }>;
 }
 
 export interface AuthResult {

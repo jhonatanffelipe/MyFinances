@@ -9,6 +9,7 @@ import { IncomeExpenseChart } from './components/IncomeExpenseChart';
 import { CategoryPieChart } from './components/CategoryPieChart';
 import { CreditCardBarChart } from './components/CreditCardBarChart';
 import { CreditCardPieChart } from './components/CreditCardPieChart';
+import { FixedExpensesChart } from './components/FixedExpensesChart';
 
 export function DashboardPage() {
   const { selectedYearMonth, setSelectedYearMonth, data, loading, error } = useDashboard();
@@ -71,6 +72,12 @@ export function DashboardPage() {
               <CreditCardBarChart data={data.expensesByCard || []} />
               <CreditCardPieChart data={data.expensesByCard || []} />
             </div>
+
+            {/* Projeção de Despesas Fixas (12 meses) */}
+            <FixedExpensesChart
+              data={data.fixedExpensesHistory || []}
+              currentYearMonth={selectedYearMonth}
+            />
           </>
         )
       )}

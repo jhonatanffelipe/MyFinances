@@ -9,6 +9,7 @@ export function registerDashboardIpc() {
       totalBalance: 0, monthIncome: 0, monthExpense: 0, fixedExpensesTotal: 0,
       balanceTrend: 0, incomeTrend: 0, expenseTrend: 0,
       monthlyHistory: [], expensesByCategory: [], expensesByCard: [], upcomingFixedExpenses: [],
+      fixedExpensesHistory: [],
     };
     const db = getDatabase();
     if (!db) return empty;
@@ -86,6 +87,27 @@ export function registerDashboardIpc() {
       };
     });
 
+    // Projeção/Histórico de 12 meses de despesas fixas: 1 mês anterior (-1), mês atual (0) e próximos 10 meses (+1 a +10)
+    const fixedExpensesHistory: Array<{ month: string; yearMonth: string; value: number }> = [];
+    for (let offset = -1; offset <= 10; offset++) {
+      const d = new Date(period.year, period.month - 1 + offset, 1);
+      const p = resolveYearMonth(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+      const rawLabel = d.toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '');
+      const monthLabel = rawLabel.charAt(0).toUpperCase() + rawLabel.slice(1);
+
+      const row = queryObject(
+        `SELECT SUM(amount) AS total FROM fixed_expenses
+         WHERE active = 1 AND start_date <= ? AND (end_date IS NULL OR end_date >= ?)`,
+        [p.end, p.start]
+      );
+
+      fixedExpensesHistory.push({
+        month: monthLabel,
+        yearMonth: p.yearMonth,
+        value: row?.total || 0,
+      });
+    }
+
     return {
       totalBalance,
       monthIncome,
@@ -98,6 +120,7 @@ export function registerDashboardIpc() {
       expensesByCategory,
       expensesByCard,
       upcomingFixedExpenses,
+      fixedExpensesHistory,
     };
   });
 }
