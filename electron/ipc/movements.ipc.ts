@@ -1,6 +1,10 @@
-import { ipcMain } from 'electron';
+import { BrowserWindow, dialog, ipcMain } from 'electron';
+import fs from 'node:fs';
+import path from 'node:path';
 import { IPC_CHANNELS } from '../../src/interfaces/IElectronBridge.js';
 import { getDatabase, persistDatabaseToDisk, queryObject, queryObjects } from '../database/index.js';
+import { analyzeImportItems, parseNubankCsv } from '../services/importParser.service.js';
+import { getMainWindow } from '../window.js';
 
 export const MOVEMENT_SELECT = `
   SELECT m.*,
@@ -100,5 +104,86 @@ export function registerMovementsIpc() {
     db.run('DELETE FROM movements WHERE id = ?', [id]);
     persistDatabaseToDisk();
     return true;
+  });
+
+  ipcMain.handle(IPC_CHANNELS.MOVEMENTS_IMPORT_SELECT_FILE, async () => {
+    const win = getMainWindow() ?? BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0];
+    if (!win) return { success: false, error: 'Janela principal não encontrada' };
+
+    const result = await dialog.showOpenDialog(win, {
+      title: 'Selecione o arquivo CSV do Nubank (Extrato ou Fatura)',
+      properties: ['openFile'],
+      filters: [
+        { name: 'Planilha CSV', extensions: ['csv'] },
+        { name: 'Todos os arquivos', extensions: ['*'] },
+      ],
+    });
+
+    if (result.canceled || result.filePaths.length === 0) {
+      return { success: false, error: 'Seleção cancelada pelo usuário' };
+    }
+
+    const filePath = result.filePaths[0];
+    try {
+      const content = fs.readFileSync(filePath, 'utf8');
+      const fileName = path.basename(filePath);
+      return { success: true, filePath, content, fileName };
+    } catch (err: any) {
+      return { success: false, error: `Falha ao ler o arquivo: ${err?.message || err}` };
+    }
+  });
+
+  ipcMain.handle(IPC_CHANNELS.MOVEMENTS_IMPORT_PARSE, async (_event, params: any = {}) => {
+    let content = params.content;
+    let fileName = params.fileName || '';
+    if (!content && params.filePath) {
+      content = fs.readFileSync(params.filePath, 'utf8');
+      fileName = path.basename(params.filePath);
+    }
+    if (!content) {
+      throw new Error('Conteúdo do arquivo não fornecido para importação');
+    }
+
+    const rawItems = parseNubankCsv(content);
+    const result = analyzeImportItems(rawItems, params.creditCardId || null, fileName);
+    return result;
+  });
+
+  ipcMain.handle(IPC_CHANNELS.MOVEMENTS_IMPORT_EXECUTE, async (_event, params: any) => {
+    const db = getDatabase();
+    if (!db) throw new Error('Banco de dados não inicializado');
+
+    const items = params?.items || [];
+    if (!Array.isArray(items) || items.length === 0) {
+      return { success: false, importedCount: 0, error: 'Nenhum lançamento selecionado para importação' };
+    }
+
+    try {
+      db.run('BEGIN TRANSACTION');
+      for (const item of items) {
+        db.run(
+          `INSERT INTO movements (description, amount, date, type, category_id, credit_card_id, notes)
+           VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          [
+            item.description,
+            item.amount,
+            item.date,
+            item.type || 'EXPENSE',
+            item.categoryId || null,
+            item.creditCardId || null,
+            item.notes || 'Importado via extrato Nubank',
+          ]
+        );
+      }
+      db.run('COMMIT');
+      persistDatabaseToDisk();
+      return { success: true, importedCount: items.length };
+    } catch (err: any) {
+      try {
+        db.run('ROLLBACK');
+      } catch (_) {}
+      console.error('[Import] Erro ao executar importação em lote:', err);
+      return { success: false, importedCount: 0, error: err?.message || 'Falha ao salvar lançamentos' };
+    }
   });
 }

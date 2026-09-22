@@ -1,5 +1,6 @@
 import React from 'react';
-import { Search, Plus, RotateCcw, Calendar } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Search, Plus, RotateCcw, Calendar, FileSpreadsheet } from 'lucide-react';
 import {
   TextField,
   MenuItem,
@@ -29,6 +30,7 @@ export function MovementFilters({
   onFilterChange,
   onOpenCreate,
 }: MovementFiltersProps) {
+  const navigate = useNavigate();
   const handleCurrentMonth = () => {
     const now = new Date();
     const year = now.getFullYear();
@@ -74,16 +76,27 @@ export function MovementFilters({
           />
         </div>
 
-        {onOpenCreate && (
+        <div className="flex items-center gap-2 self-stretch sm:self-auto">
           <Button
-            variant="contained"
-            onClick={onOpenCreate}
-            startIcon={<Plus className="w-4 h-4" />}
-            className="bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-xl px-5 py-2.5 shadow-none normal-case whitespace-nowrap self-stretch sm:self-auto text-xs"
+            variant="outlined"
+            onClick={() => navigate('/movements/import')}
+            startIcon={<FileSpreadsheet className="w-4 h-4 text-emerald-600" />}
+            className="border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold rounded-xl px-4 py-2.5 normal-case whitespace-nowrap text-xs"
           >
-            Nova Transação
+            Importar Fatura
           </Button>
-        )}
+
+          {onOpenCreate && (
+            <Button
+              variant="contained"
+              onClick={onOpenCreate}
+              startIcon={<Plus className="w-4 h-4" />}
+              className="bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-xl px-5 py-2.5 shadow-none normal-case whitespace-nowrap text-xs"
+            >
+              Nova Transação
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Filter Fields Grid */}

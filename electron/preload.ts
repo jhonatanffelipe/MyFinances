@@ -29,6 +29,11 @@ const electronAPI: IElectronAPI = {
   updateMovement: (id, movement) => ipcRenderer.invoke(IPC_CHANNELS.MOVEMENTS_UPDATE, id, movement),
   deleteMovement: (id) => ipcRenderer.invoke(IPC_CHANNELS.MOVEMENTS_DELETE, id),
 
+  // Importação de faturas e extratos
+  selectImportFile: () => ipcRenderer.invoke(IPC_CHANNELS.MOVEMENTS_IMPORT_SELECT_FILE),
+  parseImportFile: (params) => ipcRenderer.invoke(IPC_CHANNELS.MOVEMENTS_IMPORT_PARSE, params),
+  executeImportMovements: (params) => ipcRenderer.invoke(IPC_CHANNELS.MOVEMENTS_IMPORT_EXECUTE, params),
+
   // Despesas fixas
   getFixedExpenses: (params) => ipcRenderer.invoke(IPC_CHANNELS.FIXED_EXPENSES_LIST, params),
   createFixedExpense: (expense) => ipcRenderer.invoke(IPC_CHANNELS.FIXED_EXPENSES_CREATE, expense),

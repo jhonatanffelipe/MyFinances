@@ -42,6 +42,10 @@ const PAGE_METADATA: Record<string, { title: string; subtitle: string }> = {
     title: 'Movimentações',
     subtitle: 'Histórico completo e detalhado das transações financeiras.',
   },
+  '/movements/import': {
+    title: 'Importar Fatura / Extrato',
+    subtitle: 'Conciliação inteligente e importação de lançamentos via planilha CSV.',
+  },
   '/fixed-expenses': {
     title: 'Despesas Fixas',
     subtitle: 'Gerenciamento de contas recorrentes e compromissos mensais.',

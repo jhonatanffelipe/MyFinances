@@ -32,6 +32,9 @@ export const IPC_CHANNELS = {
   MOVEMENTS_CREATE: 'movements:create',
   MOVEMENTS_UPDATE: 'movements:update',
   MOVEMENTS_DELETE: 'movements:delete',
+  MOVEMENTS_IMPORT_SELECT_FILE: 'movements:import-select-file',
+  MOVEMENTS_IMPORT_PARSE: 'movements:import-parse',
+  MOVEMENTS_IMPORT_EXECUTE: 'movements:import-execute',
 
   FIXED_EXPENSES_LIST: 'fixed-expenses:list',
   FIXED_EXPENSES_CREATE: 'fixed-expenses:create',
@@ -65,9 +68,57 @@ export interface PaginationParams {
   orderDirection?: 'asc' | 'desc';
 }
 
+export interface ImportPreviewItem {
+  id: string;
+  date: string;
+  description: string;
+  amount: number;
+  type: 'EXPENSE' | 'INCOME';
+  categoryId: number | null;
+  creditCardId: number | null;
+  isInvoicePayment: boolean;
+  potentialDuplicate: {
+    isDuplicate: boolean;
+    reason?: string;
+    existingMovementId?: number;
+    existingFixedExpenseId?: number;
+  };
+  selected: boolean;
+}
+
+export interface ImportParseResult {
+  items: ImportPreviewItem[];
+  totalCount: number;
+  duplicateCount: number;
+  invoicePaymentCount: number;
+  totalExpense: number;
+  totalIncome: number;
+  fileName?: string;
+}
+
+export interface ImportExecuteItem {
+  date: string;
+  description: string;
+  amount: number;
+  type: 'EXPENSE' | 'INCOME';
+  categoryId: number | null;
+  creditCardId: number | null;
+  notes?: string;
+}
+
+export interface ImportExecuteParams {
+  items: ImportExecuteItem[];
+}
+
+export interface ImportExecuteResult {
+  success: boolean;
+  importedCount: number;
+  error?: string;
+}
+
 export interface IElectronAPI {
   getDbConfig: () => Promise<{ dbPath: string | null; dbFile: string | null }>;
-  selectDbFolder: () => Promise<{ success: boolean; dbPath?: string; error?: string }>;
+  selectDbFolder: () => Promise<{ success: boolean; dbPath?: string; dbFile?: string; error?: string }>;
   selectDbFile: () => Promise<{ success: boolean; dbPath?: string; dbFile?: string; error?: string }>;
 
   // Autenticação local
@@ -92,6 +143,11 @@ export interface IElectronAPI {
   createMovement: (movement: Omit<Movement, 'id' | 'created_at'>) => Promise<Movement>;
   updateMovement: (id: number, movement: Partial<Movement>) => Promise<boolean>;
   deleteMovement: (id: number) => Promise<boolean>;
+
+  // Importação de faturas e extratos
+  selectImportFile: () => Promise<{ success: boolean; filePath?: string; content?: string; fileName?: string; error?: string }>;
+  parseImportFile: (params: { filePath?: string; content?: string; fileName?: string; creditCardId?: number | null }) => Promise<ImportParseResult>;
+  executeImportMovements: (params: ImportExecuteParams) => Promise<ImportExecuteResult>;
 
   // Despesas fixas (paginado)
   getFixedExpenses: (params?: PaginationParams & { yearMonth?: string }) => Promise<PaginatedResult<FixedExpense>>;
