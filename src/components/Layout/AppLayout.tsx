@@ -7,7 +7,6 @@ import {
   CalendarCheck2,
   Tags,
   CreditCard as CreditCardIcon,
-  FolderSync,
   LogOut,
   Database,
   User,
@@ -68,7 +67,7 @@ const PAGE_METADATA: Record<string, { title: string; subtitle: string }> = {
 export function AppLayout() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { dbPath, dbFile, user, loading, logout, selectFolder, selectFile } = useAuth();
+  const { dbPath, dbFile, user, loading, logout } = useAuth();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
 
   // Enquanto faz a checagem inicial de status E houver chance de usuário já logado
@@ -98,16 +97,6 @@ export function AppLayout() {
 
   const handleMenuClose = () => {
     setAnchorEl(null);
-  };
-
-  const handleChangeDbFolder = async () => {
-    handleMenuClose();
-    await selectFolder();
-  };
-
-  const handleChangeDbFile = async () => {
-    handleMenuClose();
-    await selectFile();
   };
 
   const handleLogout = () => {
@@ -211,22 +200,21 @@ export function AppLayout() {
             </button>
           </Link>
 
-          {/* SQLite Database Status Button */}
-          <button
-            onClick={handleChangeDbFolder}
-            title={`Clique para trocar a pasta do banco de dados.\nCaminho: ${dbPath}`}
-            className="w-full text-left bg-slate-800/60 hover:bg-slate-800 border border-slate-800/80 rounded-2xl p-3 transition-all cursor-pointer group"
+          {/* SQLite Database Status Indicator (estático quando logado) */}
+          <div
+            title={`Banco de dados SQLite conectado.\nArquivo: ${dbFile || 'db_myfinances.sqlite'}\nCaminho: ${dbPath}`}
+            className="w-full text-left bg-slate-800/40 border border-slate-800/80 rounded-2xl p-3 select-none"
           >
             <div className="flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-sm shadow-emerald-500/50" />
-              <span className="text-xs font-bold text-white group-hover:text-emerald-300 transition-colors">
+              <span className="text-xs font-bold text-white">
                 SQLite Ativo
               </span>
             </div>
             <p className="text-[11px] font-mono text-slate-400 mt-1 truncate">
               {dbFile || 'db_myfinances.sqlite'}
             </p>
-          </button>
+          </div>
         </div>
       </aside>
 
@@ -304,22 +292,6 @@ export function AppLayout() {
               </ListItemIcon>
               <ListItemText primaryTypographyProps={{ className: 'text-xs font-semibold text-slate-800' }}>
                 Meu Perfil
-              </ListItemText>
-            </MenuItem>
-            <MenuItem onClick={handleChangeDbFolder} className="text-xs py-2 text-slate-700">
-              <ListItemIcon>
-                <FolderSync className="w-4 h-4 text-slate-500" />
-              </ListItemIcon>
-              <ListItemText primaryTypographyProps={{ className: 'text-xs font-medium' }}>
-                Trocar Pasta do Banco
-              </ListItemText>
-            </MenuItem>
-            <MenuItem onClick={handleChangeDbFile} className="text-xs py-2 text-slate-700">
-              <ListItemIcon>
-                <Database className="w-4 h-4 text-slate-500" />
-              </ListItemIcon>
-              <ListItemText primaryTypographyProps={{ className: 'text-xs font-medium' }}>
-                Selecionar Arquivo .sqlite
               </ListItemText>
             </MenuItem>
             <MenuItem onClick={handleLogout} className="text-xs py-2 text-red-600">
