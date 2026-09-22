@@ -11,6 +11,8 @@ interface AuthContextType {
   loading: boolean;
   /** true while the folder-select dialog is open / DB is being initialized */
   selecting: boolean;
+  dbError: string | null;
+  clearDbError: () => void;
   selectFolder: () => Promise<boolean>;
   selectFile: () => Promise<boolean>;
   register: (name: string, pass: string) => Promise<{ success: boolean; error?: string }>;
@@ -39,6 +41,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [registeredUserName, setRegisteredUserName] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [selecting, setSelecting] = useState<boolean>(false);
+  const [dbError, setDbError] = useState<string | null>(null);
+
+  const clearDbError = useCallback(() => setDbError(null), []);
 
   const refreshState = useCallback(async () => {
     try {
@@ -71,12 +76,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       if (!window.electronAPI) return false;
       setSelecting(true);
+      setDbError(null);
       const result = await window.electronAPI.selectDbFolder();
       console.log('[AuthContext] selectDbFolder result:', result);
       if (result.success && result.dbPath) {
         // Atualiza estado diretamente
         setDbPath(result.dbPath);
-        setDbFile('db_myfinances.sqlite');
+        setDbFile(result.dbFile || 'db_myfinances.sqlite');
 
         // Verifica se o banco já tem um usuário (pasta com banco existente)
         try {
@@ -89,9 +95,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
         return true;
       }
+      if (!result.success && result.error && result.error !== 'Seleção cancelada pelo usuário') {
+        setDbError(result.error);
+      }
       return false;
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error selecting DB folder:', err);
+      setDbError(err?.message || 'Erro ao selecionar a pasta do banco de dados');
       return false;
     } finally {
       setSelecting(false);
@@ -102,6 +112,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       if (!window.electronAPI) return false;
       setSelecting(true);
+      setDbError(null);
       const result = await window.electronAPI.selectDbFile();
       console.log('[AuthContext] selectDbFile result:', result);
       if (result.success && result.dbPath) {
@@ -119,9 +130,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
         return true;
       }
+      if (!result.success && result.error && result.error !== 'Seleção cancelada pelo usuário') {
+        setDbError(result.error);
+      }
       return false;
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error selecting DB file:', err);
+      setDbError(err?.message || 'Erro ao selecionar o arquivo do banco de dados');
       return false;
     } finally {
       setSelecting(false);
@@ -181,6 +196,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         registeredUserName,
         loading,
         selecting,
+        dbError,
+        clearDbError,
         selectFolder,
         selectFile,
         register,

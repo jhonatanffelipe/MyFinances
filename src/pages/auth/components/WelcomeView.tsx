@@ -1,13 +1,14 @@
 import React from 'react';
-import { ShieldCheck, Database, Folder, Loader2 } from 'lucide-react';
+import { ShieldCheck, Database, Folder, Loader2, AlertCircle } from 'lucide-react';
 
 interface WelcomeViewProps {
   selecting: boolean;
+  error?: string | null;
   onSelectFolder: () => void;
   onSelectFile: () => void;
 }
 
-export function WelcomeView({ selecting, onSelectFolder, onSelectFile }: WelcomeViewProps) {
+export function WelcomeView({ selecting, error, onSelectFolder, onSelectFile }: WelcomeViewProps) {
   return (
     <div className="min-h-screen w-full flex items-center justify-center p-6 bg-slate-50/50">
       <div className="w-full max-w-lg bg-white rounded-3xl p-10 shadow-sm border border-slate-100 flex flex-col items-center text-center animate-fade-in">
@@ -27,7 +28,7 @@ export function WelcomeView({ selecting, onSelectFolder, onSelectFile }: Welcome
         </p>
 
         {/* Why SQLite Info Box */}
-        <div className="w-full bg-slate-50/80 border border-slate-100 rounded-2xl p-4 flex items-start gap-4 text-left mb-8">
+        <div className="w-full bg-slate-50/80 border border-slate-100 rounded-2xl p-4 flex items-start gap-4 text-left mb-6">
           <div className="w-10 h-10 rounded-xl bg-slate-900 text-white flex items-center justify-center flex-shrink-0 shadow-sm">
             <Database className="w-5 h-5" />
           </div>
@@ -38,6 +39,13 @@ export function WelcomeView({ selecting, onSelectFolder, onSelectFile }: Welcome
             </p>
           </div>
         </div>
+
+        {error && (
+          <div className="w-full mb-6 p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl flex items-center gap-2 text-left">
+            <AlertCircle className="w-4 h-4 flex-shrink-0 text-red-500" />
+            <span>{error}</span>
+          </div>
+        )}
 
         {/* Action Buttons: Create New Folder or Select Existing File */}
         <div className="w-full space-y-3">

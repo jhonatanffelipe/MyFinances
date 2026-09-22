@@ -15,6 +15,7 @@ export function AuthPage({ forcedStep }: AuthPageProps) {
     registeredUserName,
     loading,
     selecting,
+    dbError,
     selectFolder,
     selectFile,
     register,
@@ -31,6 +32,7 @@ export function AuthPage({ forcedStep }: AuthPageProps) {
     return (
       <WelcomeView
         selecting={selecting}
+        error={dbError}
         onSelectFolder={async () => {
           const ok = await selectFolder();
           if (ok) setActiveStep(null);

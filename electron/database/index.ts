@@ -57,6 +57,46 @@ export function queryObject(sql: string, params: any[] = []): any | null {
   return rows.length > 0 ? rows[0] : null;
 }
 
+function resolveSqlJs(): { initSqlJs: any; wasmPath: string } {
+  // 1. Tenta resolver via require.resolve padrão do Node/Electron
+  try {
+    const jsEntry = require.resolve('sql.js');
+    const wasmPath = path.join(path.dirname(jsEntry), 'sql-wasm.wasm');
+    if (fs.existsSync(wasmPath)) {
+      return { initSqlJs: require(jsEntry), wasmPath };
+    }
+  } catch (_) {}
+
+  // 2. Procura em diretórios candidatos conhecidos (desenvolvimento, empacotado e dist-electron)
+  const candidateDirs: string[] = [
+    path.join(__dirname, '..', 'node_modules', 'sql.js'),
+    path.join(__dirname, '..', '..', 'node_modules', 'sql.js'),
+    path.join(process.cwd(), 'node_modules', 'sql.js'),
+  ];
+
+  try {
+    const electron = require('electron');
+    if (electron?.app?.getAppPath) {
+      candidateDirs.push(path.join(electron.app.getAppPath(), 'node_modules', 'sql.js'));
+    }
+  } catch (_) {}
+
+  if ((process as any).resourcesPath) {
+    candidateDirs.push(path.join((process as any).resourcesPath, 'app.asar.unpacked', 'node_modules', 'sql.js'));
+    candidateDirs.push(path.join((process as any).resourcesPath, 'node_modules', 'sql.js'));
+  }
+
+  for (const dir of candidateDirs) {
+    const jsEntry = path.join(dir, 'dist', 'sql-wasm.js');
+    const wasmPath = path.join(dir, 'dist', 'sql-wasm.wasm');
+    if (fs.existsSync(jsEntry) && fs.existsSync(wasmPath)) {
+      return { initSqlJs: require(jsEntry), wasmPath };
+    }
+  }
+
+  throw new Error('Não foi possível localizar os arquivos do sql.js (sql-wasm.js e sql-wasm.wasm)');
+}
+
 export async function initDatabase(targetPath: string): Promise<boolean> {
   try {
     const isFile = fs.existsSync(targetPath) && fs.statSync(targetPath).isFile();
@@ -80,10 +120,8 @@ export async function initDatabase(targetPath: string): Promise<boolean> {
       dbInstance = null;
     }
 
-    // Carrega o sql.js com WebAssembly a partir de node_modules
-    const sqlJsPath = path.join(__dirname, '..', '..', 'node_modules', 'sql.js');
-    const wasmPath = path.join(sqlJsPath, 'dist', 'sql-wasm.wasm');
-    const initSqlJs = require(path.join(sqlJsPath, 'dist', 'sql-wasm.js'));
+    // Carrega o sql.js com WebAssembly
+    const { initSqlJs, wasmPath } = resolveSqlJs();
 
     const SQL = await initSqlJs({
       locateFile: () => wasmPath,
@@ -106,7 +144,7 @@ export async function initDatabase(targetPath: string): Promise<boolean> {
     console.log('[DB] Database initialized successfully at:', currentDbFilePath);
     return true;
   } catch (err) {
-    console.error('Error initializing SQLite database:', err);
+    console.error('[DB] Erro ao inicializar o banco de dados SQLite:', err);
     return false;
   }
 }
