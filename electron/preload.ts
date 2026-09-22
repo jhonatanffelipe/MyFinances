@@ -6,10 +6,12 @@ const electronAPI: IElectronAPI = {
   selectDbFolder: () => ipcRenderer.invoke(IPC_CHANNELS.DB_SELECT_FOLDER),
   selectDbFile: () => ipcRenderer.invoke(IPC_CHANNELS.DB_SELECT_FILE),
 
-  // Autenticação
+  // Autenticação e perfil
   getAuthStatus: () => ipcRenderer.invoke(IPC_CHANNELS.AUTH_STATUS),
   registerUser: (name, password) => ipcRenderer.invoke(IPC_CHANNELS.AUTH_REGISTER, name, password),
   login: (name, password) => ipcRenderer.invoke(IPC_CHANNELS.AUTH_LOGIN, name, password),
+  updateProfile: (data) => ipcRenderer.invoke(IPC_CHANNELS.AUTH_UPDATE_PROFILE, data),
+  changePassword: (data) => ipcRenderer.invoke(IPC_CHANNELS.AUTH_CHANGE_PASSWORD, data),
 
   // Categorias
   getCategories: (params) => ipcRenderer.invoke(IPC_CHANNELS.CATEGORIES_LIST, params),

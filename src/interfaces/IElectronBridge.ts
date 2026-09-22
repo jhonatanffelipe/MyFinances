@@ -17,6 +17,8 @@ export const IPC_CHANNELS = {
   AUTH_STATUS: 'auth:status',
   AUTH_REGISTER: 'auth:register',
   AUTH_LOGIN: 'auth:login',
+  AUTH_UPDATE_PROFILE: 'auth:update-profile',
+  AUTH_CHANGE_PASSWORD: 'auth:change-password',
 
   CATEGORIES_LIST: 'categories:list',
   CATEGORIES_CREATE: 'categories:create',
@@ -122,10 +124,23 @@ export interface IElectronAPI {
   selectDbFolder: () => Promise<{ success: boolean; dbPath?: string; dbFile?: string; error?: string }>;
   selectDbFile: () => Promise<{ success: boolean; dbPath?: string; dbFile?: string; error?: string }>;
 
-  // Autenticação local
+  // Autenticação local e perfil
   getAuthStatus: () => Promise<{ hasUser: boolean; userName: string | null }>;
   registerUser: (name: string, password: string) => Promise<AuthResult>;
   login: (name: string, password: string) => Promise<AuthResult>;
+  updateProfile: (data: {
+    id: number;
+    name: string;
+    email?: string;
+    role?: string;
+    phone?: string;
+    avatar?: string;
+  }) => Promise<{ success: boolean; user?: AppUser; error?: string }>;
+  changePassword: (data: {
+    id: number;
+    currentPassword: string;
+    newPassword: string;
+  }) => Promise<{ success: boolean; error?: string }>;
 
   // Categorias (paginado)
   getCategories: (params?: PaginationParams & { yearMonth?: string }) => Promise<PaginatedResult<Category>>;

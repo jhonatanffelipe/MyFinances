@@ -5,6 +5,11 @@ export type FixedExpenseRecurrence = 'MONTHLY' | 'BIMONTHLY' | 'QUARTERLY' | 'SE
 export interface AppUser {
   id: number;
   name: string;
+  email?: string;
+  role?: string;
+  phone?: string;
+  avatar?: string;
+  last_login?: string;
   created_at?: string;
 }
 

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, Outlet, useLocation } from 'react-router-dom';
+import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
   Wallet,
   LayoutDashboard,
@@ -10,6 +10,7 @@ import {
   FolderSync,
   LogOut,
   Database,
+  User,
 } from 'lucide-react';
 import { Menu, MenuItem, ListItemIcon, ListItemText, CircularProgress } from '@mui/material';
 import { useAuth } from '../../contexts/AuthContext';
@@ -38,6 +39,10 @@ const PAGE_METADATA: Record<string, { title: string; subtitle: string }> = {
     title: 'Dashboard',
     subtitle: 'Visão geral e monitoramento das suas finanças este mês.',
   },
+  '/profile': {
+    title: 'Meu perfil',
+    subtitle: 'Gerencie suas informações pessoais e credenciais de acesso.',
+  },
   '/movements': {
     title: 'Movimentações',
     subtitle: 'Histórico completo e detalhado das transações financeiras.',
@@ -62,6 +67,7 @@ const PAGE_METADATA: Record<string, { title: string; subtitle: string }> = {
 
 export function AppLayout() {
   const location = useLocation();
+  const navigate = useNavigate();
   const { dbPath, dbFile, user, loading, logout, selectFolder, selectFile } = useAuth();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
 
@@ -111,6 +117,7 @@ export function AppLayout() {
 
   const userInitials = (user.name || 'Carlos Silva')
     .split(' ')
+    .filter(Boolean)
     .map((w) => w[0])
     .slice(0, 2)
     .join('')
@@ -162,12 +169,53 @@ export function AppLayout() {
           </nav>
         </div>
 
-        {/* SQLite Database Status Footer matching Figma */}
-        <div className="p-4">
+        {/* Sidebar Bottom Area: User Profile Pill + SQLite Database Status */}
+        <div className="p-4 space-y-2">
+          {/* User profile pill matching reference UI */}
+          <Link
+            to="/profile"
+            className="flex items-center justify-between p-2.5 rounded-xl bg-slate-800/40 hover:bg-slate-800/90 border border-slate-700/50 transition-all group"
+            title="Meu perfil"
+          >
+            <div className="flex items-center gap-2.5 overflow-hidden">
+              {user.avatar ? (
+                <img
+                  src={user.avatar}
+                  alt={user.name}
+                  className="w-9 h-9 rounded-full object-cover ring-2 ring-emerald-500/30 flex-shrink-0"
+                />
+              ) : (
+                <div className="w-9 h-9 rounded-full bg-emerald-600 text-white font-bold flex items-center justify-center text-xs flex-shrink-0 shadow-sm">
+                  {userInitials}
+                </div>
+              )}
+              <div className="overflow-hidden">
+                <p className="text-xs font-bold text-white truncate group-hover:text-emerald-300 transition-colors">
+                  {user.name}
+                </p>
+                <p className="text-[11px] text-slate-400 truncate">
+                  {user.role || 'Gestor Financeiro'}
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                handleLogout();
+              }}
+              title="Encerrar Sessão"
+              className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-slate-700/60 rounded-lg transition-colors flex-shrink-0 cursor-pointer"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
+          </Link>
+
+          {/* SQLite Database Status Button */}
           <button
             onClick={handleChangeDbFolder}
             title={`Clique para trocar a pasta do banco de dados.\nCaminho: ${dbPath}`}
-            className="w-full text-left bg-slate-800/60 hover:bg-slate-800 border border-slate-800/80 rounded-2xl p-3.5 transition-all cursor-pointer group"
+            className="w-full text-left bg-slate-800/60 hover:bg-slate-800 border border-slate-800/80 rounded-2xl p-3 transition-all cursor-pointer group"
           >
             <div className="flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-sm shadow-emerald-500/50" />
@@ -203,9 +251,17 @@ export function AppLayout() {
             <span className="text-sm font-bold text-slate-800 hidden sm:inline">
               {user.name}
             </span>
-            <div className="w-10 h-10 rounded-full bg-emerald-600 text-white font-bold flex items-center justify-center text-sm shadow-sm ring-2 ring-emerald-500/20 select-none">
-              {userInitials}
-            </div>
+            {user.avatar ? (
+              <img
+                src={user.avatar}
+                alt={user.name}
+                className="w-10 h-10 rounded-full object-cover ring-2 ring-emerald-500/20 shadow-sm"
+              />
+            ) : (
+              <div className="w-10 h-10 rounded-full bg-emerald-600 text-white font-bold flex items-center justify-center text-sm shadow-sm ring-2 ring-emerald-500/20 select-none">
+                {userInitials}
+              </div>
+            )}
           </div>
 
           {/* Profile Popover Menu */}
@@ -223,6 +279,20 @@ export function AppLayout() {
               <p className="text-xs font-semibold text-slate-400">Conectado como</p>
               <p className="text-sm font-bold text-slate-800 truncate">{user.name}</p>
             </div>
+            <MenuItem
+              onClick={() => {
+                handleMenuClose();
+                navigate('/profile');
+              }}
+              className="text-xs py-2 text-slate-700"
+            >
+              <ListItemIcon>
+                <User className="w-4 h-4 text-emerald-600" />
+              </ListItemIcon>
+              <ListItemText primaryTypographyProps={{ className: 'text-xs font-semibold text-slate-800' }}>
+                Meu Perfil
+              </ListItemText>
+            </MenuItem>
             <MenuItem onClick={handleChangeDbFolder} className="text-xs py-2 text-slate-700">
               <ListItemIcon>
                 <FolderSync className="w-4 h-4 text-slate-500" />

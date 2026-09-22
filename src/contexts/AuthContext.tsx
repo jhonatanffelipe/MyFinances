@@ -17,6 +17,17 @@ interface AuthContextType {
   selectFile: () => Promise<boolean>;
   register: (name: string, pass: string) => Promise<{ success: boolean; error?: string }>;
   login: (name: string, pass: string) => Promise<{ success: boolean; error?: string }>;
+  updateUserProfile: (data: {
+    name: string;
+    email?: string;
+    role?: string;
+    phone?: string;
+    avatar?: string;
+  }) => Promise<{ success: boolean; error?: string }>;
+  changePassword: (
+    currentPassword: string,
+    newPassword: string
+  ) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
   resetDbSelection: () => void;
   refreshState: () => Promise<void>;
@@ -175,6 +186,52 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const updateUserProfile = async (data: {
+    name: string;
+    email?: string;
+    role?: string;
+    phone?: string;
+    avatar?: string;
+  }): Promise<{ success: boolean; error?: string }> => {
+    try {
+      if (!window.electronAPI || !user) {
+        return { success: false, error: 'Usuário não autenticado' };
+      }
+      const res = await window.electronAPI.updateProfile({
+        id: user.id,
+        ...data,
+      });
+      if (res.success && res.user) {
+        setUser(res.user);
+        setRegisteredUserName(res.user.name);
+        sessionStorage.setItem(SESSION_USER_KEY, JSON.stringify(res.user));
+        return { success: true };
+      }
+      return { success: false, error: res.error || 'Erro ao atualizar perfil' };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Erro ao atualizar perfil' };
+    }
+  };
+
+  const changePassword = async (
+    currentPassword: string,
+    newPassword: string
+  ): Promise<{ success: boolean; error?: string }> => {
+    try {
+      if (!window.electronAPI || !user) {
+        return { success: false, error: 'Usuário não autenticado' };
+      }
+      const res = await window.electronAPI.changePassword({
+        id: user.id,
+        currentPassword,
+        newPassword,
+      });
+      return res;
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Erro ao alterar senha' };
+    }
+  };
+
   const logout = () => {
     setUser(null);
     sessionStorage.removeItem(SESSION_USER_KEY);
@@ -202,6 +259,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         selectFile,
         register,
         login,
+        updateUserProfile,
+        changePassword,
         logout,
         resetDbSelection,
         refreshState,

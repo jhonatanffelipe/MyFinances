@@ -8,6 +8,7 @@ import { FixedExpensesPage } from '../pages/fixed-expenses';
 import { CategoriesPage } from '../pages/categories';
 import { CreditCardsPage } from '../pages/credit-cards';
 import { ImportMovementsPage } from '../pages/import-movements';
+import { ProfilePage } from '../pages/profile';
 import { AuthPage } from '../pages/auth';
 
 export function AppRoutes() {
@@ -19,6 +20,7 @@ export function AppRoutes() {
           <Route element={<AppLayout />}>
             <Route path="/" element={<DashboardPage />} />
             <Route path="/dashboard" element={<Navigate to="/" replace />} />
+            <Route path="/profile" element={<ProfilePage />} />
             <Route path="/movements" element={<MovementsPage />} />
             <Route path="/movements/import" element={<ImportMovementsPage />} />
             <Route path="/fixed-expenses" element={<FixedExpensesPage />} />

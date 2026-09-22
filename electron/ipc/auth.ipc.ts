@@ -21,10 +21,14 @@ export function registerAuthIpc() {
     const existing = queryObject('SELECT id FROM users WHERE name = ?', [trimmed]);
     if (existing) return { success: false, error: 'Já existe um usuário com esse nome neste banco' };
 
-    db.run('INSERT INTO users (name, password_hash) VALUES (?, ?)', [trimmed, hashPassword(password)]);
+    const now = new Date().toISOString();
+    db.run('INSERT INTO users (name, password_hash, last_login) VALUES (?, ?, ?)', [trimmed, hashPassword(password), now]);
     persistDatabaseToDisk();
 
-    const created = queryObject('SELECT id, name, created_at FROM users WHERE name = ?', [trimmed]);
+    const created = queryObject(
+      'SELECT id, name, email, role, phone, avatar, created_at, last_login FROM users WHERE name = ?',
+      [trimmed]
+    );
     return { success: true, user: created };
   });
 
@@ -35,6 +39,85 @@ export function registerAuthIpc() {
     if (!row || !verifyPassword(password, row.password_hash)) {
       return { success: false, error: 'Usuário ou senha inválidos' };
     }
-    return { success: true, user: { id: row.id, name: row.name, created_at: row.created_at } };
+
+    const now = new Date().toISOString();
+    db.run('UPDATE users SET last_login = ? WHERE id = ?', [now, row.id]);
+    persistDatabaseToDisk();
+
+    return {
+      success: true,
+      user: {
+        id: row.id,
+        name: row.name,
+        email: row.email || '',
+        role: row.role || '',
+        phone: row.phone || '',
+        avatar: row.avatar || '',
+        created_at: row.created_at,
+        last_login: now,
+      },
+    };
   });
+
+  ipcMain.handle(
+    IPC_CHANNELS.AUTH_UPDATE_PROFILE,
+    async (
+      _event,
+      data: { id: number; name: string; email?: string; role?: string; phone?: string; avatar?: string }
+    ) => {
+      const db = getDatabase();
+      if (!db) return { success: false, error: 'Banco de dados não inicializado' };
+
+      const trimmedName = (data.name || '').trim();
+      if (trimmedName.length < 2) return { success: false, error: 'Informe um nome válido' };
+
+      const existing = queryObject('SELECT id FROM users WHERE name = ? AND id != ?', [trimmedName, data.id]);
+      if (existing) return { success: false, error: 'Já existe outro usuário com esse nome' };
+
+      db.run(
+        `UPDATE users
+         SET name = ?, email = ?, role = ?, phone = ?, avatar = ?
+         WHERE id = ?`,
+        [
+          trimmedName,
+          (data.email || '').trim(),
+          (data.role || '').trim(),
+          (data.phone || '').trim(),
+          data.avatar || null,
+          data.id,
+        ]
+      );
+      persistDatabaseToDisk();
+
+      const updated = queryObject(
+        'SELECT id, name, email, role, phone, avatar, created_at, last_login FROM users WHERE id = ?',
+        [data.id]
+      );
+      return { success: true, user: updated };
+    }
+  );
+
+  ipcMain.handle(
+    IPC_CHANNELS.AUTH_CHANGE_PASSWORD,
+    async (_event, data: { id: number; currentPassword: string; newPassword: string }) => {
+      const db = getDatabase();
+      if (!db) return { success: false, error: 'Banco de dados não inicializado' };
+
+      const row = queryObject('SELECT * FROM users WHERE id = ?', [data.id]);
+      if (!row) return { success: false, error: 'Usuário não encontrado' };
+
+      if (!verifyPassword(data.currentPassword, row.password_hash)) {
+        return { success: false, error: 'A senha atual informada está incorreta' };
+      }
+
+      if (!data.newPassword || data.newPassword.length < 8) {
+        return { success: false, error: 'A nova senha deve ter no mínimo 8 caracteres' };
+      }
+
+      db.run('UPDATE users SET password_hash = ? WHERE id = ?', [hashPassword(data.newPassword), data.id]);
+      persistDatabaseToDisk();
+
+      return { success: true };
+    }
+  );
 }

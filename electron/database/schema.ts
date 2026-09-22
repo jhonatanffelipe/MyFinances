@@ -26,6 +26,11 @@ export function createTablesAndRunMigrations(
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL UNIQUE,
       password_hash TEXT NOT NULL,
+      email TEXT,
+      role TEXT,
+      phone TEXT,
+      avatar TEXT,
+      last_login TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
   `);
@@ -100,4 +105,11 @@ export function createTablesAndRunMigrations(
   ensureColumn(db, queryObjectsFn, 'movements', 'fixed_expense_id', 'INTEGER');
   ensureColumn(db, queryObjectsFn, 'fixed_expenses', 'credit_card_id', 'INTEGER');
   ensureColumn(db, queryObjectsFn, 'fixed_expenses', 'recurrence', "TEXT DEFAULT 'MONTHLY'");
+
+  // ---- Campos de Perfil de Usuário ----
+  ensureColumn(db, queryObjectsFn, 'users', 'email', 'TEXT');
+  ensureColumn(db, queryObjectsFn, 'users', 'role', 'TEXT');
+  ensureColumn(db, queryObjectsFn, 'users', 'phone', 'TEXT');
+  ensureColumn(db, queryObjectsFn, 'users', 'avatar', 'TEXT');
+  ensureColumn(db, queryObjectsFn, 'users', 'last_login', 'TEXT');
 }
