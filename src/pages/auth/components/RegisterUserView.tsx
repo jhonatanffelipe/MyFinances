@@ -6,6 +6,7 @@ interface RegisterUserViewProps {
   loading: boolean;
   onRegister: (name: string, pass: string) => Promise<{ success: boolean; error?: string }>;
   onBackToFolderSelection: () => void;
+  onGoToLogin?: () => void;
 }
 
 export function RegisterUserView({
@@ -13,6 +14,7 @@ export function RegisterUserView({
   loading,
   onRegister,
   onBackToFolderSelection,
+  onGoToLogin,
 }: RegisterUserViewProps) {
   const [name, setName] = useState('Carlos Silva');
   const [password, setPassword] = useState('');
@@ -182,8 +184,19 @@ export function RegisterUserView({
               disabled={submitting || loading}
               className="w-full py-3 px-6 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold text-sm transition-all cursor-pointer"
             >
-              Voltar para Seleção de Pasta
+              Trocar Pasta / Banco de Dados
             </button>
+
+            {onGoToLogin && (
+              <button
+                type="button"
+                onClick={onGoToLogin}
+                disabled={submitting || loading}
+                className="w-full py-2.5 px-6 rounded-xl border border-transparent hover:border-slate-200 text-slate-500 hover:text-slate-800 font-medium text-xs transition-all cursor-pointer"
+              >
+                Já possui conta? Ir para a tela de Login
+              </button>
+            )}
           </div>
         </form>
 

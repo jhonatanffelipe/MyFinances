@@ -22,38 +22,58 @@ export function AuthPage({ forcedStep }: AuthPageProps) {
     resetDbSelection,
   } = useAuth();
 
+  const [activeStep, setActiveStep] = React.useState<'welcome' | 'register' | 'login' | null>(null);
+
+  const step = forcedStep || activeStep || (!dbPath ? 'welcome' : !hasUser ? 'register' : 'login');
+
   // Se forçado explicitamente ou se nenhum dbPath foi configurado, exibe Boas-vindas
-  if (forcedStep === 'welcome' || !dbPath) {
+  if (step === 'welcome' || !dbPath) {
     return (
       <WelcomeView
         selecting={selecting}
-        onSelectFolder={selectFolder}
-        onSelectFile={selectFile}
+        onSelectFolder={async () => {
+          const ok = await selectFolder();
+          if (ok) setActiveStep(null);
+        }}
+        onSelectFile={async () => {
+          const ok = await selectFile();
+          if (ok) setActiveStep(null);
+        }}
       />
     );
   }
 
-  // Se o banco foi configurado, mas ainda não existe usuário cadastrado:
-  if (forcedStep === 'register' || !hasUser) {
+  // Se a etapa ativa for de cadastro ou se ainda não existe usuário cadastrado:
+  if (step === 'register') {
     return (
       <RegisterUserView
         dbPath={dbPath}
         loading={loading}
         onRegister={register}
-        onBackToFolderSelection={selectFolder}
+        onBackToFolderSelection={() => {
+          resetDbSelection();
+          setActiveStep('welcome');
+        }}
+        onGoToLogin={() => setActiveStep('login')}
       />
     );
   }
 
-  // Caso contrário, usuário já registrado, exibe tela de login
+  // Caso contrário, exibe tela de login
   return (
     <LoginView
       dbPath={dbPath}
       defaultUserName={registeredUserName}
       loading={loading}
       onLogin={login}
-      onChangeFolder={selectFolder}
-      onChangeFile={selectFile}
+      onChangeFolder={async () => {
+        const ok = await selectFolder();
+        if (ok) setActiveStep(null);
+      }}
+      onChangeFile={async () => {
+        const ok = await selectFile();
+        if (ok) setActiveStep(null);
+      }}
     />
   );
 }
