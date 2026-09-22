@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Plus, RotateCcw, Calendar, FileSpreadsheet, Ban } from 'lucide-react';
+import { Search, Plus, RotateCcw, Calendar, FileSpreadsheet, Ban, ChevronLeft, ChevronRight } from 'lucide-react';
 import {
   TextField,
   MenuItem,
@@ -32,18 +32,47 @@ export function MovementFilters({
   onOpenCreate,
 }: MovementFiltersProps) {
   const navigate = useNavigate();
-  const handleCurrentMonth = () => {
+  const getBaseMonthDate = (): Date => {
+    if (filters.startDate && /^\d{4}-\d{2}-\d{2}$/.test(filters.startDate)) {
+      const parts = filters.startDate.split('-').map(Number);
+      return new Date(parts[0], parts[1] - 1, 1);
+    }
     const now = new Date();
-    now.setDate(1); // Evita overflow em meses com 31 dias
-    now.setMonth(now.getMonth() + 1); // Mês atual mais 1
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const lastDay = new Date(year, now.getMonth() + 1, 0).getDate();
+    now.setDate(1);
+    now.setMonth(now.getMonth() + 1); // Mês atual mais 1 padrão
+    return now;
+  };
+
+  const setMonthRange = (baseDate: Date) => {
+    const year = baseDate.getFullYear();
+    const month = String(baseDate.getMonth() + 1).padStart(2, '0');
+    const lastDay = new Date(year, baseDate.getMonth() + 1, 0).getDate();
     onFilterChange({
       ...filters,
       startDate: `${year}-${month}-01`,
       endDate: `${year}-${month}-${String(lastDay).padStart(2, '0')}`,
     });
+  };
+
+  const handlePreviousMonth = () => {
+    const d = getBaseMonthDate();
+    d.setDate(1);
+    d.setMonth(d.getMonth() - 1);
+    setMonthRange(d);
+  };
+
+  const handleCurrentMonth = () => {
+    const now = new Date();
+    now.setDate(1);
+    now.setMonth(now.getMonth() + 1); // Mês atual mais 1
+    setMonthRange(now);
+  };
+
+  const handleNextMonth = () => {
+    const d = getBaseMonthDate();
+    d.setDate(1);
+    d.setMonth(d.getMonth() + 1);
+    setMonthRange(d);
   };
 
   const handleClearFilters = () => {
@@ -239,17 +268,39 @@ export function MovementFilters({
         </FormControl>
       </div>
 
-      {/* Bottom Actions Row: Mês Atual on left, Limpar Filtros on right */}
-      <div className="flex items-center justify-between pt-2 border-t border-slate-50 text-xs">
-        <Button
-          size="small"
-          variant="text"
-          onClick={handleCurrentMonth}
-          startIcon={<Calendar className="w-3.5 h-3.5 text-emerald-600" />}
-          className="text-emerald-700 hover:bg-emerald-50 normal-case font-semibold text-xs px-2.5 py-1 rounded-lg"
-        >
-          Filtrar mês atual
-        </Button>
+      {/* Bottom Actions Row: Navegação de Mês on left, Limpar Filtros on right */}
+      <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-50 text-xs">
+        <div className="flex items-center gap-1">
+          <Button
+            size="small"
+            variant="text"
+            onClick={handlePreviousMonth}
+            startIcon={<ChevronLeft className="w-3.5 h-3.5 text-slate-500" />}
+            className="text-slate-600 hover:text-slate-900 hover:bg-slate-100 normal-case font-medium text-xs px-2.5 py-1 rounded-lg"
+          >
+            Mês anterior
+          </Button>
+
+          <Button
+            size="small"
+            variant="text"
+            onClick={handleCurrentMonth}
+            startIcon={<Calendar className="w-3.5 h-3.5 text-emerald-600" />}
+            className="text-emerald-700 hover:bg-emerald-50 normal-case font-semibold text-xs px-2.5 py-1 rounded-lg"
+          >
+            Mês atual
+          </Button>
+
+          <Button
+            size="small"
+            variant="text"
+            onClick={handleNextMonth}
+            endIcon={<ChevronRight className="w-3.5 h-3.5 text-slate-500" />}
+            className="text-slate-600 hover:text-slate-900 hover:bg-slate-100 normal-case font-medium text-xs px-2.5 py-1 rounded-lg"
+          >
+            Próximo mês
+          </Button>
+        </div>
 
         <Button
           size="small"
