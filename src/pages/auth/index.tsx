@@ -68,6 +68,7 @@ export function AuthPage({ forcedStep }: AuthPageProps) {
       defaultUserName={registeredUserName}
       loading={loading}
       onLogin={login}
+      onGoToRegister={() => setActiveStep('register')}
       onChangeFolder={async () => {
         const ok = await selectFolder();
         if (ok) setActiveStep(null);

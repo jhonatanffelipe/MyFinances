@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Wallet, Database, Eye, EyeOff, Loader2, AlertCircle } from 'lucide-react';
+import { Wallet, Database, Eye, EyeOff, Loader2, AlertCircle, UserPlus } from 'lucide-react';
 
 interface LoginViewProps {
   dbPath: string;
@@ -8,6 +8,7 @@ interface LoginViewProps {
   onLogin: (name: string, pass: string) => Promise<{ success: boolean; error?: string }>;
   onChangeFolder: () => void;
   onChangeFile?: () => void;
+  onGoToRegister?: () => void;
 }
 
 export function LoginView({
@@ -17,6 +18,7 @@ export function LoginView({
   onLogin,
   onChangeFolder,
   onChangeFile,
+  onGoToRegister,
 }: LoginViewProps) {
   const [name, setName] = useState(defaultUserName || '');
   const [password, setPassword] = useState('');
@@ -144,6 +146,18 @@ export function LoginView({
                 'Entrar'
               )}
             </button>
+
+            {onGoToRegister && (
+              <button
+                type="button"
+                onClick={onGoToRegister}
+                disabled={submitting || loading}
+                className="w-full py-2.5 px-6 rounded-xl border border-emerald-200/60 hover:bg-emerald-50 text-emerald-700 font-semibold text-xs transition-all cursor-pointer flex items-center justify-center gap-1.5"
+              >
+                <UserPlus className="w-4 h-4 text-emerald-600" />
+                <span>Não possui conta? Criar novo usuário</span>
+              </button>
+            )}
 
             <button
               type="button"
