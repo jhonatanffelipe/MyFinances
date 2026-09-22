@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
 import {
+  Wallet,
   LayoutDashboard,
   ArrowLeftRight,
-  CalendarClock,
+  CalendarCheck2,
   Tags,
-  CreditCard,
-  Wallet,
-  LogOut,
+  CreditCard as CreditCardIcon,
   FolderSync,
+  LogOut,
+  Database,
 } from 'lucide-react';
 import { Menu, MenuItem, ListItemIcon, ListItemText, CircularProgress } from '@mui/material';
 import { useAuth } from '../../contexts/AuthContext';
@@ -23,9 +24,9 @@ interface NavItem {
 const navItems: NavItem[] = [
   { label: 'Dashboard', path: '/', icon: LayoutDashboard },
   { label: 'Movimentações', path: '/movements', icon: ArrowLeftRight },
-  { label: 'Despesas Fixas', path: '/fixed-expenses', icon: CalendarClock },
+  { label: 'Despesas Fixas', path: '/fixed-expenses', icon: CalendarCheck2 },
   { label: 'Categorias', path: '/categories', icon: Tags },
-  { label: 'Cartões de Crédito', path: '/credit-cards', icon: CreditCard },
+  { label: 'Cartões de Crédito', path: '/credit-cards', icon: CreditCardIcon },
 ];
 
 const PAGE_METADATA: Record<string, { title: string; subtitle: string }> = {
@@ -57,7 +58,7 @@ const PAGE_METADATA: Record<string, { title: string; subtitle: string }> = {
 
 export function AppLayout() {
   const location = useLocation();
-  const { dbPath, dbFile, user, loading, logout, selectFolder } = useAuth();
+  const { dbPath, dbFile, user, loading, logout, selectFolder, selectFile } = useAuth();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
 
   // Enquanto faz a checagem inicial de status E houver chance de usuário já logado
@@ -92,6 +93,11 @@ export function AppLayout() {
   const handleChangeDbFolder = async () => {
     handleMenuClose();
     await selectFolder();
+  };
+
+  const handleChangeDbFile = async () => {
+    handleMenuClose();
+    await selectFile();
   };
 
   const handleLogout = () => {
@@ -219,6 +225,14 @@ export function AppLayout() {
               </ListItemIcon>
               <ListItemText primaryTypographyProps={{ className: 'text-xs font-medium' }}>
                 Trocar Pasta do Banco
+              </ListItemText>
+            </MenuItem>
+            <MenuItem onClick={handleChangeDbFile} className="text-xs py-2 text-slate-700">
+              <ListItemIcon>
+                <Database className="w-4 h-4 text-slate-500" />
+              </ListItemIcon>
+              <ListItemText primaryTypographyProps={{ className: 'text-xs font-medium' }}>
+                Selecionar Arquivo .sqlite
               </ListItemText>
             </MenuItem>
             <MenuItem onClick={handleLogout} className="text-xs py-2 text-red-600">

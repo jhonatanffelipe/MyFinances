@@ -12,6 +12,7 @@ import {
 export const IPC_CHANNELS = {
   DB_GET_CONFIG: 'db:get-config',
   DB_SELECT_FOLDER: 'db:select-folder',
+  DB_SELECT_FILE: 'db:select-file',
 
   AUTH_STATUS: 'auth:status',
   AUTH_REGISTER: 'auth:register',
@@ -67,6 +68,7 @@ export interface PaginationParams {
 export interface IElectronAPI {
   getDbConfig: () => Promise<{ dbPath: string | null; dbFile: string | null }>;
   selectDbFolder: () => Promise<{ success: boolean; dbPath?: string; error?: string }>;
+  selectDbFile: () => Promise<{ success: boolean; dbPath?: string; dbFile?: string; error?: string }>;
 
   // Autenticação local
   getAuthStatus: () => Promise<{ hasUser: boolean; userName: string | null }>;

@@ -12,6 +12,7 @@ interface AuthContextType {
   /** true while the folder-select dialog is open / DB is being initialized */
   selecting: boolean;
   selectFolder: () => Promise<boolean>;
+  selectFile: () => Promise<boolean>;
   register: (name: string, pass: string) => Promise<{ success: boolean; error?: string }>;
   login: (name: string, pass: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
@@ -97,6 +98,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const selectFile = async (): Promise<boolean> => {
+    try {
+      if (!window.electronAPI) return false;
+      setSelecting(true);
+      const result = await window.electronAPI.selectDbFile();
+      console.log('[AuthContext] selectDbFile result:', result);
+      if (result.success && result.dbPath) {
+        setDbPath(result.dbPath);
+        setDbFile(result.dbFile || 'db_myfinances.sqlite');
+
+        // Verifica se o banco selecionado já possui usuário
+        try {
+          const authStatus = await window.electronAPI.getAuthStatus();
+          setHasUser(authStatus.hasUser);
+          setRegisteredUserName(authStatus.userName || null);
+        } catch {
+          setHasUser(false);
+          setRegisteredUserName(null);
+        }
+        return true;
+      }
+      return false;
+    } catch (err) {
+      console.error('Error selecting DB file:', err);
+      return false;
+    } finally {
+      setSelecting(false);
+    }
+  };
+
   const register = async (name: string, pass: string): Promise<{ success: boolean; error?: string }> => {
     try {
       if (!window.electronAPI) return { success: false, error: 'API do Electron não disponível' };
@@ -151,6 +182,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         loading,
         selecting,
         selectFolder,
+        selectFile,
         register,
         login,
         logout,

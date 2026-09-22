@@ -10,7 +10,7 @@ export function registerDbIpc() {
     const config = loadConfig();
     const currentDbFilePath = getCurrentDbFilePath();
     return {
-      dbPath: config.dbFolder || null,
+      dbPath: config.dbFolder || (currentDbFilePath ? path.dirname(currentDbFilePath) : null),
       dbFile: currentDbFilePath ? path.basename(currentDbFilePath) : null,
     };
   });
@@ -20,7 +20,7 @@ export function registerDbIpc() {
     if (!win) return { success: false, error: 'No main window' };
 
     const result = await dialog.showOpenDialog(win, {
-      title: 'Escolha a pasta onde o banco de dados MyFinances será salvo',
+      title: 'Escolha a pasta onde o banco de dados MyFinances será salvo ou criado',
       properties: ['openDirectory', 'createDirectory'],
     });
 
@@ -33,8 +33,45 @@ export function registerDbIpc() {
 
     if (initialized) {
       saveConfig({ dbFolder: selectedFolder });
-      return { success: true, dbPath: selectedFolder };
+      const currentDb = getCurrentDbFilePath();
+      return {
+        success: true,
+        dbPath: selectedFolder,
+        dbFile: currentDb ? path.basename(currentDb) : null,
+      };
     }
     return { success: false, error: 'Falha ao inicializar o banco de dados SQLite na pasta selecionada' };
+  });
+
+  ipcMain.handle(IPC_CHANNELS.DB_SELECT_FILE, async () => {
+    const win = getMainWindow() ?? BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0];
+    if (!win) return { success: false, error: 'No main window' };
+
+    const result = await dialog.showOpenDialog(win, {
+      title: 'Selecione um arquivo de banco de dados SQLite existente',
+      properties: ['openFile'],
+      filters: [
+        { name: 'Banco de Dados SQLite', extensions: ['sqlite', 'sqlite3', 'db'] },
+        { name: 'Todos os arquivos', extensions: ['*'] },
+      ],
+    });
+
+    if (result.canceled || result.filePaths.length === 0) {
+      return { success: false, error: 'Seleção cancelada pelo usuário' };
+    }
+
+    const selectedFile = result.filePaths[0];
+    const initialized = await initDatabase(selectedFile);
+
+    if (initialized) {
+      const folderPath = path.dirname(selectedFile);
+      saveConfig({ dbFolder: folderPath, dbFilePath: selectedFile });
+      return {
+        success: true,
+        dbPath: folderPath,
+        dbFile: path.basename(selectedFile),
+      };
+    }
+    return { success: false, error: 'Falha ao abrir o banco de dados SQLite selecionado' };
   });
 }

@@ -7,6 +7,7 @@ interface LoginViewProps {
   loading: boolean;
   onLogin: (name: string, pass: string) => Promise<{ success: boolean; error?: string }>;
   onChangeFolder: () => void;
+  onChangeFile?: () => void;
 }
 
 export function LoginView({
@@ -15,6 +16,7 @@ export function LoginView({
   loading,
   onLogin,
   onChangeFolder,
+  onChangeFile,
 }: LoginViewProps) {
   const [name, setName] = useState(defaultUserName || 'Carlos Silva');
   const [password, setPassword] = useState('');
@@ -149,8 +151,20 @@ export function LoginView({
               disabled={submitting || loading}
               className="w-full py-3 px-6 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold text-sm transition-all cursor-pointer"
             >
-              Trocar local do banco de dados (SQLite)
+              Trocar pasta do banco de dados (SQLite)
             </button>
+
+            {onChangeFile && (
+              <button
+                type="button"
+                onClick={onChangeFile}
+                disabled={submitting || loading}
+                className="w-full py-2.5 px-6 rounded-xl border border-transparent hover:border-slate-200 text-slate-500 hover:text-slate-800 font-medium text-xs transition-all cursor-pointer flex items-center justify-center gap-1.5"
+              >
+                <Database className="w-3.5 h-3.5" />
+                <span>Selecionar arquivo .sqlite existente</span>
+              </button>
+            )}
           </div>
         </form>
 

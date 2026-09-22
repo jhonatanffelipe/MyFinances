@@ -16,6 +16,7 @@ export function AuthPage({ forcedStep }: AuthPageProps) {
     loading,
     selecting,
     selectFolder,
+    selectFile,
     register,
     login,
     resetDbSelection,
@@ -27,6 +28,7 @@ export function AuthPage({ forcedStep }: AuthPageProps) {
       <WelcomeView
         selecting={selecting}
         onSelectFolder={selectFolder}
+        onSelectFile={selectFile}
       />
     );
   }
@@ -51,6 +53,7 @@ export function AuthPage({ forcedStep }: AuthPageProps) {
       loading={loading}
       onLogin={login}
       onChangeFolder={selectFolder}
+      onChangeFile={selectFile}
     />
   );
 }

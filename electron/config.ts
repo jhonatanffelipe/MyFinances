@@ -4,6 +4,7 @@ import path from 'node:path';
 
 export interface AppConfig {
   dbFolder?: string;
+  dbFilePath?: string;
 }
 
 const CONFIG_FILE = path.join(app.getPath('userData'), 'myfinances-config.json');

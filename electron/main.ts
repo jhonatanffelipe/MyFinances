@@ -17,8 +17,9 @@ registerAllIpcHandlers();
 
 app.whenReady().then(async () => {
   const initialConfig = loadConfig();
-  if (initialConfig.dbFolder) {
-    await initDatabase(initialConfig.dbFolder);
+  const targetDb = initialConfig.dbFilePath || initialConfig.dbFolder;
+  if (targetDb) {
+    await initDatabase(targetDb);
   }
 
   createMainWindow();

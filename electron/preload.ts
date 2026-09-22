@@ -4,6 +4,7 @@ import { IElectronAPI, IPC_CHANNELS } from '../src/interfaces/IElectronBridge';
 const electronAPI: IElectronAPI = {
   getDbConfig: () => ipcRenderer.invoke(IPC_CHANNELS.DB_GET_CONFIG),
   selectDbFolder: () => ipcRenderer.invoke(IPC_CHANNELS.DB_SELECT_FOLDER),
+  selectDbFile: () => ipcRenderer.invoke(IPC_CHANNELS.DB_SELECT_FILE),
 
   // Autenticação
   getAuthStatus: () => ipcRenderer.invoke(IPC_CHANNELS.AUTH_STATUS),

@@ -57,16 +57,23 @@ export function queryObject(sql: string, params: any[] = []): any | null {
   return rows.length > 0 ? rows[0] : null;
 }
 
-export async function initDatabase(folderPath: string): Promise<boolean> {
+export async function initDatabase(targetPath: string): Promise<boolean> {
   try {
-    if (!fs.existsSync(folderPath)) {
-      fs.mkdirSync(folderPath, { recursive: true });
-    }
+    const isFile = fs.existsSync(targetPath) && fs.statSync(targetPath).isFile();
 
-    const legacyPath = path.join(folderPath, LEGACY_DB_FILE_NAME);
-    currentDbFilePath = fs.existsSync(legacyPath)
-      ? legacyPath
-      : path.join(folderPath, DB_FILE_NAME);
+    if (isFile) {
+      currentDbFilePath = targetPath;
+    } else {
+      const folderPath = targetPath;
+      if (!fs.existsSync(folderPath)) {
+        fs.mkdirSync(folderPath, { recursive: true });
+      }
+
+      const legacyPath = path.join(folderPath, LEGACY_DB_FILE_NAME);
+      currentDbFilePath = fs.existsSync(legacyPath)
+        ? legacyPath
+        : path.join(folderPath, DB_FILE_NAME);
+    }
 
     if (dbInstance) {
       try { dbInstance.close(); } catch (_) {}
