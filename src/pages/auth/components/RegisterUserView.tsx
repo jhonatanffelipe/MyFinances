@@ -16,7 +16,7 @@ export function RegisterUserView({
   onBackToFolderSelection,
   onGoToLogin,
 }: RegisterUserViewProps) {
-  const [name, setName] = useState('Carlos Silva');
+  const [name, setName] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -103,7 +103,7 @@ export function RegisterUserView({
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Ex: Carlos Silva"
+              placeholder="Digite seu nome completo"
               required
               className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
             />

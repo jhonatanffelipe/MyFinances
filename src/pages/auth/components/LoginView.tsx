@@ -18,7 +18,7 @@ export function LoginView({
   onChangeFolder,
   onChangeFile,
 }: LoginViewProps) {
-  const [name, setName] = useState(defaultUserName || 'Carlos Silva');
+  const [name, setName] = useState(defaultUserName || '');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -99,7 +99,7 @@ export function LoginView({
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Ex: Carlos Silva"
+              placeholder="Digite seu nome de usuário"
               required
               className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
             />

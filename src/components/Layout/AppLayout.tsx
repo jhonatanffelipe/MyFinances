@@ -115,7 +115,7 @@ export function AppLayout() {
     logout();
   };
 
-  const userInitials = (user.name || 'Carlos Silva')
+  const userInitials = (user.name || 'U')
     .split(' ')
     .filter(Boolean)
     .map((w) => w[0])
