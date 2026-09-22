@@ -26,6 +26,8 @@ export function ImportMovementsPage() {
     creditCards,
     selectedCreditCardId,
     setSelectedCreditCardId,
+    invoiceDate,
+    setInvoiceDate,
     loading,
     parsing,
     importing,
@@ -179,6 +181,8 @@ export function ImportMovementsPage() {
             creditCards={creditCards}
             selectedCreditCardId={selectedCreditCardId}
             onCreditCardChange={setSelectedCreditCardId}
+            invoiceDate={invoiceDate}
+            onInvoiceDateChange={setInvoiceDate}
             filterText={filterText}
             onFilterTextChange={setFilterText}
             statusFilter={statusFilter}

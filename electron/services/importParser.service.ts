@@ -404,6 +404,7 @@ export function analyzeImportItems(
     return {
       id: `import_row_${index}_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
       date: raw.date,
+      originalDate: raw.date,
       description: raw.title,
       amount: absAmount,
       type,

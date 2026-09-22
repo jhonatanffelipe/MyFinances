@@ -22,6 +22,8 @@ import {
   Menu,
   Tooltip,
 } from '@mui/material';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import dayjs from 'dayjs';
 import { Category, CreditCard } from '../../../types/database';
 import { StatusFilter } from '../types';
 
@@ -29,6 +31,8 @@ interface ImportFiltersBarProps {
   creditCards: CreditCard[];
   selectedCreditCardId: number | null;
   onCreditCardChange: (id: number | null) => void;
+  invoiceDate: string;
+  onInvoiceDateChange: (date: string) => void;
   filterText: string;
   onFilterTextChange: (text: string) => void;
   statusFilter: StatusFilter;
@@ -51,6 +55,8 @@ export function ImportFiltersBar({
   creditCards,
   selectedCreditCardId,
   onCreditCardChange,
+  invoiceDate,
+  onInvoiceDateChange,
   filterText,
   onFilterTextChange,
   statusFilter,
@@ -87,7 +93,7 @@ export function ImportFiltersBar({
 
   return (
     <Paper className="p-4 rounded-2xl border border-slate-100 shadow-sm bg-white space-y-4">
-      {/* Top Row: Cartão de Crédito + Busca por Texto */}
+      {/* Top Row: Cartão de Crédito + Data dos Movimentos + Busca por Texto */}
       <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
         {/* Seletor de Cartão */}
         <div className="md:col-span-4">
@@ -128,12 +134,42 @@ export function ImportFiltersBar({
           </FormControl>
         </div>
 
+        {/* Data dos Movimentos (Vencimento da Fatura) */}
+        <div className="md:col-span-3">
+          <DatePicker
+            label="Data dos Movimentos (Vencimento)"
+            value={invoiceDate ? dayjs(invoiceDate) : null}
+            onChange={(val) => {
+              if (val && val.isValid()) {
+                onInvoiceDateChange(val.format('YYYY-MM-DD'));
+              } else {
+                onInvoiceDateChange('');
+              }
+            }}
+            slotProps={{
+              textField: {
+                size: 'small',
+                fullWidth: true,
+                helperText: invoiceDate
+                  ? 'Data aplicada a todos os lançamentos'
+                  : 'Vazia: mantém data da compra',
+                InputProps: {
+                  className: 'rounded-xl bg-slate-50/60 text-xs',
+                },
+                FormHelperTextProps: {
+                  className: 'text-[10px] text-slate-400 mt-0.5',
+                },
+              },
+            }}
+          />
+        </div>
+
         {/* Campo de Busca de Estabelecimentos */}
-        <div className="md:col-span-8">
+        <div className="md:col-span-5">
           <TextField
             size="small"
             fullWidth
-            placeholder="Filtrar lançamentos por nome (ex: Uber, Pix, Decathlon, Mercado)..."
+            placeholder="Filtrar lançamentos por nome (ex: Uber, Pix, Decathlon)..."
             value={filterText}
             onChange={(e) => onFilterTextChange(e.target.value)}
             InputProps={{

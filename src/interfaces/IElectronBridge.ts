@@ -71,6 +71,7 @@ export interface PaginationParams {
 export interface ImportPreviewItem {
   id: string;
   date: string;
+  originalDate?: string;
   description: string;
   amount: number;
   type: 'EXPENSE' | 'INCOME';

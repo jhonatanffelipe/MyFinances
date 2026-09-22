@@ -134,8 +134,13 @@ export function ImportTable({
                   </TableCell>
 
                   {/* Data */}
-                  <TableCell className="text-xs font-mono text-slate-600 whitespace-nowrap">
-                    {formatDate(item.date)}
+                  <TableCell className="text-xs font-mono text-slate-700 whitespace-nowrap">
+                    <span className="font-semibold block">{formatDate(item.date)}</span>
+                    {item.originalDate && item.originalDate !== item.date && (
+                      <span className="text-[10px] text-slate-400 font-sans block">
+                        Compra: {formatDate(item.originalDate)}
+                      </span>
+                    )}
                   </TableCell>
 
                   {/* Descrição */}

@@ -11,6 +11,8 @@ export interface UseImportMovementsReturn {
   creditCards: CreditCard[];
   selectedCreditCardId: number | null;
   setSelectedCreditCardId: (id: number | null) => void;
+  invoiceDate: string;
+  setInvoiceDate: (date: string) => void;
   loading: boolean;
   parsing: boolean;
   importing: boolean;

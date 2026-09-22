@@ -9,6 +9,7 @@ export function useImportMovements(): UseImportMovementsReturn {
   const [categories, setCategories] = useState<Category[]>([]);
   const [creditCards, setCreditCards] = useState<CreditCard[]>([]);
   const [selectedCreditCardId, setSelectedCreditCardId] = useState<number | null>(null);
+  const [invoiceDate, setInvoiceDate] = useState<string>('');
 
   const [loading, setLoading] = useState<boolean>(true);
   const [parsing, setParsing] = useState<boolean>(false);
@@ -68,6 +69,26 @@ export function useImportMovements(): UseImportMovementsReturn {
     );
   };
 
+  // Atualiza a data de vencimento/movimentações para todos os itens
+  const handleSetInvoiceDate = (newDate: string) => {
+    setInvoiceDate(newDate);
+    if (newDate) {
+      setItems((prev) =>
+        prev.map((item) => ({
+          ...item,
+          date: newDate,
+        }))
+      );
+    } else {
+      setItems((prev) =>
+        prev.map((item) => ({
+          ...item,
+          date: item.originalDate || item.date,
+        }))
+      );
+    }
+  };
+
   // Faz o parse do conteúdo do arquivo CSV
   const parseContent = async (content: string, name: string) => {
     try {
@@ -82,7 +103,23 @@ export function useImportMovements(): UseImportMovementsReturn {
       });
 
       setFileName(name);
-      setItems(result.items);
+
+      // Detecta se o nome do arquivo contém a data de vencimento (ex: Nubank_2026-10-08.csv)
+      const dateMatch = name.match(/(\d{4}-\d{2}-\d{2})/);
+      const initialInvoiceDate = dateMatch ? dateMatch[1] : '';
+
+      if (initialInvoiceDate) {
+        setInvoiceDate(initialInvoiceDate);
+        setItems(
+          result.items.map((item) => ({
+            ...item,
+            date: initialInvoiceDate,
+          }))
+        );
+      } else {
+        setInvoiceDate('');
+        setItems(result.items);
+      }
     } catch (err: any) {
       console.error('Erro ao processar arquivo CSV:', err);
       setError(err?.message || 'Falha ao processar arquivo CSV');
@@ -210,6 +247,7 @@ export function useImportMovements(): UseImportMovementsReturn {
   const handleResetFile = () => {
     setFileName(null);
     setItems([]);
+    setInvoiceDate('');
     setFilterText('');
     setStatusFilter('ALL');
     setError(null);
@@ -228,15 +266,26 @@ export function useImportMovements(): UseImportMovementsReturn {
       setImporting(true);
       setError(null);
 
-      const payload = selectedItems.map((item) => ({
-        date: item.date,
-        description: item.description,
-        amount: item.amount,
-        type: item.type,
-        categoryId: item.categoryId,
-        creditCardId: selectedCreditCardId,
-        notes: item.isInvoicePayment ? 'Pagamento de fatura importado' : 'Importado via extrato Nubank',
-      }));
+      const payload = selectedItems.map((item) => {
+        const finalDate = invoiceDate ? invoiceDate : item.date;
+        let note = item.isInvoicePayment ? 'Pagamento de fatura importado' : 'Importado via extrato Nubank';
+
+        if (invoiceDate && item.originalDate && item.originalDate !== invoiceDate) {
+          const parts = item.originalDate.split('-');
+          const origFormatted = parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : item.originalDate;
+          note = `Compra realizada em ${origFormatted} | ${note}`;
+        }
+
+        return {
+          date: finalDate,
+          description: item.description,
+          amount: item.amount,
+          type: item.type,
+          categoryId: item.categoryId,
+          creditCardId: selectedCreditCardId,
+          notes: note,
+        };
+      });
 
       const res = await window.electronAPI.executeImportMovements({ items: payload });
       if (res.success) {
@@ -275,6 +324,8 @@ export function useImportMovements(): UseImportMovementsReturn {
     creditCards,
     selectedCreditCardId,
     setSelectedCreditCardId: handleSetCreditCardId,
+    invoiceDate,
+    setInvoiceDate: handleSetInvoiceDate,
     loading,
     parsing,
     importing,
