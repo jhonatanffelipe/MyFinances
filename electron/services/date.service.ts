@@ -1,5 +1,7 @@
 export function resolveYearMonth(target?: string) {
   const now = new Date();
+  now.setDate(1);
+  now.setMonth(now.getMonth() + 1);
   const year = target ? parseInt(target.split('-')[0], 10) : now.getFullYear();
   const month = target ? parseInt(target.split('-')[1], 10) : now.getMonth() + 1;
   const yearMonth = `${year}-${String(month).padStart(2, '0')}`;
