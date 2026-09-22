@@ -6,9 +6,26 @@ import { hashPassword, verifyPassword } from '../services/auth.service.js';
 export function registerAuthIpc() {
   ipcMain.handle(IPC_CHANNELS.AUTH_STATUS, async () => {
     const db = getDatabase();
-    if (!db) return { hasUser: false, userName: null };
-    const row = queryObject('SELECT name FROM users ORDER BY id ASC LIMIT 1');
-    return { hasUser: !!row, userName: row?.name || null };
+    if (!db) return { hasUser: false, userName: null, user: null };
+    const row = queryObject(
+      'SELECT id, name, email, role, phone, avatar, created_at, last_login FROM users ORDER BY id ASC LIMIT 1'
+    );
+    return {
+      hasUser: !!row,
+      userName: row?.name || null,
+      user: row
+        ? {
+            id: row.id,
+            name: row.name,
+            email: row.email || '',
+            role: row.role || '',
+            phone: row.phone || '',
+            avatar: row.avatar || '',
+            created_at: row.created_at,
+            last_login: row.last_login,
+          }
+        : null,
+    };
   });
 
   ipcMain.handle(IPC_CHANNELS.AUTH_REGISTER, async (_event, name: string, password: string) => {
@@ -63,7 +80,7 @@ export function registerAuthIpc() {
     IPC_CHANNELS.AUTH_UPDATE_PROFILE,
     async (
       _event,
-      data: { id: number; name: string; email?: string; role?: string; phone?: string; avatar?: string }
+      data: { id?: number; name: string; email?: string; role?: string; phone?: string; avatar?: string | null }
     ) => {
       const db = getDatabase();
       if (!db) return { success: false, error: 'Banco de dados não inicializado' };
@@ -71,27 +88,30 @@ export function registerAuthIpc() {
       const trimmedName = (data.name || '').trim();
       if (trimmedName.length < 2) return { success: false, error: 'Informe um nome válido' };
 
-      const existing = queryObject('SELECT id FROM users WHERE name = ? AND id != ?', [trimmedName, data.id]);
+      let targetId = data.id;
+      if (!targetId) {
+        const firstUser = queryObject('SELECT id FROM users ORDER BY id ASC LIMIT 1');
+        targetId = firstUser?.id;
+      }
+      if (!targetId) return { success: false, error: 'Usuário não encontrado' };
+
+      const existing = queryObject('SELECT id FROM users WHERE name = ? AND id != ?', [trimmedName, targetId]);
       if (existing) return { success: false, error: 'Já existe outro usuário com esse nome' };
+
+      const currentUser = queryObject('SELECT * FROM users WHERE id = ?', [targetId]);
+      const avatarToSet = data.avatar !== undefined ? data.avatar : (currentUser?.avatar || null);
 
       db.run(
         `UPDATE users
-         SET name = ?, email = ?, role = ?, phone = ?, avatar = ?
+         SET name = ?, avatar = ?
          WHERE id = ?`,
-        [
-          trimmedName,
-          (data.email || '').trim(),
-          (data.role || '').trim(),
-          (data.phone || '').trim(),
-          data.avatar || null,
-          data.id,
-        ]
+        [trimmedName, avatarToSet, targetId]
       );
       persistDatabaseToDisk();
 
       const updated = queryObject(
         'SELECT id, name, email, role, phone, avatar, created_at, last_login FROM users WHERE id = ?',
-        [data.id]
+        [targetId]
       );
       return { success: true, user: updated };
     }

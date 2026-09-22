@@ -255,10 +255,10 @@ export function AppLayout() {
               <img
                 src={user.avatar}
                 alt={user.name}
-                className="w-10 h-10 rounded-full object-cover ring-2 ring-emerald-500/20 shadow-sm"
+                className="w-10 h-10 rounded-full object-cover ring-2 ring-emerald-500/20 shadow-sm flex-shrink-0"
               />
             ) : (
-              <div className="w-10 h-10 rounded-full bg-emerald-600 text-white font-bold flex items-center justify-center text-sm shadow-sm ring-2 ring-emerald-500/20 select-none">
+              <div className="w-10 h-10 rounded-full bg-emerald-600 text-white font-bold flex items-center justify-center text-sm shadow-sm ring-2 ring-emerald-500/20 select-none flex-shrink-0">
                 {userInitials}
               </div>
             )}
@@ -275,9 +275,22 @@ export function AppLayout() {
               className: 'rounded-2xl shadow-lg border border-slate-100 mt-1 min-w-[200px]',
             }}
           >
-            <div className="px-4 py-2 border-b border-slate-100">
-              <p className="text-xs font-semibold text-slate-400">Conectado como</p>
-              <p className="text-sm font-bold text-slate-800 truncate">{user.name}</p>
+            <div className="px-4 py-2 border-b border-slate-100 flex items-center gap-2.5">
+              {user.avatar ? (
+                <img
+                  src={user.avatar}
+                  alt={user.name}
+                  className="w-8 h-8 rounded-full object-cover ring-1 ring-emerald-500/30 flex-shrink-0"
+                />
+              ) : (
+                <div className="w-8 h-8 rounded-full bg-emerald-600 text-white font-bold flex items-center justify-center text-xs flex-shrink-0">
+                  {userInitials}
+                </div>
+              )}
+              <div className="overflow-hidden">
+                <p className="text-xs font-semibold text-slate-400">Conectado como</p>
+                <p className="text-sm font-bold text-slate-800 truncate">{user.name}</p>
+              </div>
             </div>
             <MenuItem
               onClick={() => {

@@ -78,6 +78,12 @@ export function ProfilePage() {
           const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.85);
           setAvatar(compressedDataUrl);
           setFeedback(null);
+
+          // Salva imediatamente no banco e no estado global para atualizar o cabeçalho na hora
+          updateUserProfile({
+            name: (name || user?.name || 'Usuário').trim(),
+            avatar: compressedDataUrl,
+          });
         }
       };
       img.src = readerEvent.target?.result as string;
@@ -88,8 +94,12 @@ export function ProfilePage() {
     e.target.value = '';
   };
 
-  const handleRemovePhoto = () => {
+  const handleRemovePhoto = async () => {
     setAvatar('');
+    await updateUserProfile({
+      name: (name || user?.name || 'Usuário').trim(),
+      avatar: null,
+    });
   };
 
   const handleSaveChanges = async (e: React.FormEvent) => {
@@ -120,7 +130,7 @@ export function ProfilePage() {
       // 1. Update personal data & avatar
       const profileRes = await updateUserProfile({
         name: trimmedName,
-        avatar: avatar || undefined,
+        avatar: avatar || null,
       });
 
       if (!profileRes.success) {
@@ -174,13 +184,24 @@ export function ProfilePage() {
 
   return (
     <div className="max-w-7xl mx-auto space-y-6 animate-in fade-in duration-200">
-      {/* Top Header matching reference image: Title, subtitle and Salvar alterações button */}
+      {/* Top Header with Avatar beside Name and Salvar button */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2">
-        <div>
-          <h2 className="text-2xl font-bold text-slate-900 tracking-tight">Meu perfil</h2>
-          <p className="text-sm text-slate-500 font-medium mt-0.5">
-            {name || 'Usuário'}
-          </p>
+        <div className="flex items-center gap-3.5">
+          <div className="w-12 h-12 rounded-full overflow-hidden ring-2 ring-emerald-500/20 bg-[#e2f7ed] flex items-center justify-center flex-shrink-0 shadow-sm">
+            {avatar ? (
+              <img src={avatar} alt={name} className="w-full h-full object-cover" />
+            ) : (
+              <span className="text-base font-bold text-emerald-700 select-none">
+                {userInitials}
+              </span>
+            )}
+          </div>
+          <div>
+            <h2 className="text-2xl font-bold text-slate-900 tracking-tight">Meu perfil</h2>
+            <p className="text-sm text-slate-500 font-medium mt-0.5">
+              {name || 'Usuário'}
+            </p>
+          </div>
         </div>
 
         <button

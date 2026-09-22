@@ -22,7 +22,7 @@ interface AuthContextType {
     email?: string;
     role?: string;
     phone?: string;
-    avatar?: string;
+    avatar?: string | null;
   }) => Promise<{ success: boolean; error?: string }>;
   changePassword: (
     currentPassword: string,
@@ -67,6 +67,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const authStatus = await window.electronAPI.getAuthStatus();
           setHasUser(authStatus.hasUser);
           setRegisteredUserName(authStatus.userName || null);
+          if (authStatus.user) {
+            const dbUser: AppUser = authStatus.user;
+            setUser((prev) => {
+              const updated: AppUser = prev ? { ...prev, ...dbUser } : dbUser;
+              sessionStorage.setItem(SESSION_USER_KEY, JSON.stringify(updated));
+              return updated;
+            });
+          }
         } else {
           setHasUser(false);
           setRegisteredUserName(null);
@@ -100,6 +108,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const authStatus = await window.electronAPI.getAuthStatus();
           setHasUser(authStatus.hasUser);
           setRegisteredUserName(authStatus.userName || null);
+          if (authStatus.user) {
+            const dbUser: AppUser = authStatus.user;
+            setUser(dbUser);
+            sessionStorage.setItem(SESSION_USER_KEY, JSON.stringify(dbUser));
+          }
         } catch {
           setHasUser(false);
           setRegisteredUserName(null);
@@ -135,6 +148,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const authStatus = await window.electronAPI.getAuthStatus();
           setHasUser(authStatus.hasUser);
           setRegisteredUserName(authStatus.userName || null);
+          if (authStatus.user) {
+            const dbUser: AppUser = authStatus.user;
+            setUser(dbUser);
+            sessionStorage.setItem(SESSION_USER_KEY, JSON.stringify(dbUser));
+          }
         } catch {
           setHasUser(false);
           setRegisteredUserName(null);
@@ -191,7 +209,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     email?: string;
     role?: string;
     phone?: string;
-    avatar?: string;
+    avatar?: string | null;
   }): Promise<{ success: boolean; error?: string }> => {
     try {
       if (!window.electronAPI || !user) {

@@ -125,16 +125,16 @@ export interface IElectronAPI {
   selectDbFile: () => Promise<{ success: boolean; dbPath?: string; dbFile?: string; error?: string }>;
 
   // Autenticação local e perfil
-  getAuthStatus: () => Promise<{ hasUser: boolean; userName: string | null }>;
+  getAuthStatus: () => Promise<{ hasUser: boolean; userName: string | null; user?: AppUser | null }>;
   registerUser: (name: string, password: string) => Promise<AuthResult>;
   login: (name: string, password: string) => Promise<AuthResult>;
   updateProfile: (data: {
-    id: number;
+    id?: number;
     name: string;
     email?: string;
     role?: string;
     phone?: string;
-    avatar?: string;
+    avatar?: string | null;
   }) => Promise<{ success: boolean; user?: AppUser; error?: string }>;
   changePassword: (data: {
     id: number;
