@@ -9,9 +9,6 @@ import {
   Laptop,
   Database,
   Lock,
-  Phone,
-  Mail,
-  Briefcase,
   KeyRound,
   Save,
 } from 'lucide-react';
@@ -24,9 +21,6 @@ export function ProfilePage() {
 
   // Form states
   const [name, setName] = useState(user?.name || '');
-  const [email, setEmail] = useState(user?.email || '');
-  const [role, setRole] = useState(user?.role || '');
-  const [phone, setPhone] = useState(user?.phone || '');
   const [avatar, setAvatar] = useState(user?.avatar || '');
 
   // Password change states
@@ -40,27 +34,9 @@ export function ProfilePage() {
   useEffect(() => {
     if (user) {
       setName(user.name || '');
-      setEmail(user.email || '');
-      setRole(user.role || '');
-      setPhone(user.phone || '');
       setAvatar(user.avatar || '');
     }
   }, [user]);
-
-  // Phone auto-formatter (BR standard: (XX) XXXXX-XXXX or (XX) XXXX-XXXX)
-  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let val = e.target.value.replace(/\D/g, '');
-    if (val.length > 11) val = val.slice(0, 11);
-
-    if (val.length > 6) {
-      val = `(${val.slice(0, 2)}) ${val.slice(2, 7)}-${val.slice(7)}`;
-    } else if (val.length > 2) {
-      val = `(${val.slice(0, 2)}) ${val.slice(2)}`;
-    } else if (val.length > 0) {
-      val = `(${val}`;
-    }
-    setPhone(val);
-  };
 
   // Image Upload with Canvas compression to keep SQLite footprint minimal
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -144,9 +120,6 @@ export function ProfilePage() {
       // 1. Update personal data & avatar
       const profileRes = await updateUserProfile({
         name: trimmedName,
-        email: email.trim(),
-        role: role.trim(),
-        phone: phone.trim(),
         avatar: avatar || undefined,
       });
 
@@ -206,7 +179,7 @@ export function ProfilePage() {
         <div>
           <h2 className="text-2xl font-bold text-slate-900 tracking-tight">Meu perfil</h2>
           <p className="text-sm text-slate-500 font-medium mt-0.5">
-            {name || 'Usuário'} · {role || 'Gestor Financeiro'}
+            {name || 'Usuário'}
           </p>
         </div>
 
@@ -245,7 +218,7 @@ export function ProfilePage() {
         </div>
       )}
 
-      {/* 2-Column Grid Layout matching the screenshot */}
+      {/* 2-Column Grid Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* Left Column (8 cols): Dados Pessoais & Segurança */}
         <div className="lg:col-span-8 space-y-6">
@@ -256,72 +229,18 @@ export function ProfilePage() {
               Dados pessoais
             </h3>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
               {/* Nome completo */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                  Nome completo
-                </label>
-                <input
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Seu nome completo"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-medium"
-                />
-              </div>
-
-              {/* E-mail corporativo / pessoal */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                  E-mail corporativo
-                </label>
-                <div className="relative">
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="exemplo@empresa.com.br"
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
-                  />
-                  <Mail className="w-4 h-4 text-slate-400 absolute right-3.5 top-3 pointer-events-none" />
-                </div>
-              </div>
-
-              {/* Cargo */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                  Cargo
-                </label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    value={role}
-                    onChange={(e) => setRole(e.target.value)}
-                    placeholder="Ex: Gestor Financeiro / Gestor Ambiental"
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
-                  />
-                  <Briefcase className="w-4 h-4 text-slate-400 absolute right-3.5 top-3 pointer-events-none" />
-                </div>
-              </div>
-
-              {/* Telefone */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                  Telefone
-                </label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    value={phone}
-                    onChange={handlePhoneChange}
-                    placeholder="(85) 9 9999-0000"
-                    maxLength={16}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-mono text-[13px]"
-                  />
-                  <Phone className="w-4 h-4 text-slate-400 absolute right-3.5 top-3 pointer-events-none" />
-                </div>
-              </div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                Nome completo
+              </label>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Seu nome completo"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-medium"
+              />
             </div>
           </div>
 
@@ -485,16 +404,8 @@ export function ProfilePage() {
               {name || 'Nome do Usuário'}
             </h3>
 
-            {/* Badge matching screenshot (e.g. • Gestor Ambiental) */}
-            <div className="mt-1.5">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/80">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                {role || 'Gestor Financeiro'}
-              </span>
-            </div>
-
             {/* Subtitle tenant/local */}
-            <p className="text-xs text-slate-400 mt-2 font-medium">
+            <p className="text-xs text-slate-400 mt-1 font-medium">
               MyFinances · SQLite Local
             </p>
           </div>
@@ -516,13 +427,6 @@ export function ProfilePage() {
                   title={dbPath || dbFile || ''}
                 >
                   {dbFile || 'db_myfinances.sqlite'}
-                </span>
-              </div>
-
-              <div className="py-2.5 flex items-center justify-between">
-                <span className="text-slate-500 font-medium">Status</span>
-                <span className="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full font-semibold border border-emerald-200/60">
-                  Ativo / Admin
                 </span>
               </div>
 

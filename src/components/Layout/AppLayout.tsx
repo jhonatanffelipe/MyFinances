@@ -194,7 +194,7 @@ export function AppLayout() {
                   {user.name}
                 </p>
                 <p className="text-[11px] text-slate-400 truncate">
-                  {user.role || 'Gestor Financeiro'}
+                  Meu perfil
                 </p>
               </div>
             </div>
