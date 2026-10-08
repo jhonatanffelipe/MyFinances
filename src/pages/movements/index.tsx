@@ -76,6 +76,7 @@ export function MovementsPage() {
         handlePagination={handlePagination}
         onEdit={handleOpenEditModal}
         onDelete={handleDeleteMovement}
+        onFilterCard={(cardId) => setFilters({ ...filters, creditCardId: cardId })}
       />
 
       {/* Modal Form */}

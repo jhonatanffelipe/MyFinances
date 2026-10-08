@@ -244,15 +244,27 @@ export function MovementFilters({
           <Select
             value={filters.creditCardId ?? ''}
             label="Forma / Cartão"
-            onChange={(e) =>
-              onFilterChange({
-                ...filters,
-                creditCardId: e.target.value !== '' ? Number(e.target.value) : undefined,
-              })
-            }
+            onChange={(e) => {
+              const val = e.target.value;
+              if (val === '') {
+                onFilterChange({ ...filters, creditCardId: undefined });
+              } else if (val === 'none' || val === 'all_ungrouped') {
+                onFilterChange({ ...filters, creditCardId: val });
+              } else {
+                onFilterChange({ ...filters, creditCardId: Number(val) });
+              }
+            }}
             className="rounded-xl text-xs"
           >
-            <MenuItem value="">Todos os cartões / Dinheiro</MenuItem>
+            <MenuItem value="" className="text-xs font-semibold text-emerald-800">
+              Todos (Faturas de cartão agrupadas)
+            </MenuItem>
+            <MenuItem value="none" className="text-xs text-slate-700">
+              Apenas Dinheiro / Conta (Sem cartão)
+            </MenuItem>
+            <MenuItem value="all_ungrouped" className="text-xs text-slate-500">
+              Todos os lançamentos (Sem agrupar)
+            </MenuItem>
             {creditCards.map((card) => (
               <MenuItem key={card.id} value={card.id} className="text-xs">
                 <span className="flex items-center gap-2">
@@ -260,7 +272,7 @@ export function MovementFilters({
                     className="w-2.5 h-2.5 rounded-full inline-block"
                     style={{ backgroundColor: card.color || '#8b5cf6' }}
                   />
-                  {card.description}
+                  {card.description} (Lançamentos detalhados)
                 </span>
               </MenuItem>
             ))}

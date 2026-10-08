@@ -49,6 +49,9 @@ export interface Movement {
   credit_card_color?: string;
   notes?: string;
   created_at?: string;
+  isGroupedCard?: boolean;
+  cardMovementCount?: number;
+  cardMovements?: Movement[];
 }
 
 export interface FixedExpense {
@@ -78,7 +81,7 @@ export interface MovementFilters {
   startDate?: string;
   endDate?: string;
   categoryId?: number;
-  creditCardId?: number;
+  creditCardId?: number | string;
   type?: TransactionType | 'ALL';
   search?: string;
   excludeSearch?: string;
