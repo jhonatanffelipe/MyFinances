@@ -3,6 +3,49 @@ import { ImportBankType, ImportPreviewItem } from '../../../interfaces/IElectron
 import { Category, CreditCard } from '../../../types/database';
 import { StatusFilter, UseImportMovementsReturn } from '../types';
 
+/**
+ * Calcula a próxima data de vencimento de um cartão a partir de uma data base
+ * (ou da data mais recente das transações) e do dia de vencimento.
+ */
+export function getNextCardDueDate(baseDateStr?: string, dueDay?: number): string {
+  if (!dueDay || dueDay < 1 || dueDay > 31) {
+    return baseDateStr || new Date().toISOString().slice(0, 10);
+  }
+
+  let year: number;
+  let month: number; // 1-12
+  let day: number;
+
+  if (baseDateStr && /^\d{4}-\d{2}-\d{2}$/.test(baseDateStr)) {
+    const parts = baseDateStr.split('-').map(Number);
+    year = parts[0];
+    month = parts[1];
+    day = parts[2];
+  } else {
+    const now = new Date();
+    year = now.getFullYear();
+    month = now.getMonth() + 1;
+    day = now.getDate();
+  }
+
+  // Se o dia da transação for posterior ao dia de vencimento, o vencimento é no mês seguinte
+  if (day > dueDay) {
+    month += 1;
+    if (month > 12) {
+      month = 1;
+      year += 1;
+    }
+  }
+
+  // Garante que o dia não passe do número de dias no mês
+  const daysInMonth = new Date(year, month, 0).getDate();
+  const clampedDay = Math.min(dueDay, daysInMonth);
+
+  const mm = String(month).padStart(2, '0');
+  const dd = String(clampedDay).padStart(2, '0');
+  return `${year}-${mm}-${dd}`;
+}
+
 export function useImportMovements(): UseImportMovementsReturn {
   const [fileName, setFileName] = useState<string | null>(null);
   const [rawFileContent, setRawFileContent] = useState<string | null>(null);
@@ -62,18 +105,37 @@ export function useImportMovements(): UseImportMovementsReturn {
     loadInitialData();
   }, [loadInitialData]);
 
-  // Atualiza o creditCardId nos itens caso o cartão selecionado mude
+  // Atualiza o creditCardId nos itens e recalcula a data de vencimento caso o cartão selecionado mude
   const handleSetCreditCardId = (cardId: number | null) => {
     setSelectedCreditCardId(cardId);
-    setItems((prev) =>
-      prev.map((item) => ({
-        ...item,
-        creditCardId: cardId,
-      }))
-    );
+    const card = creditCards.find((c) => c.id === cardId);
+
+    if (card?.due_day && items.length > 0) {
+      const validDates = items
+        .map((i) => i.originalDate || i.date)
+        .filter((d): d is string => Boolean(d && /^\d{4}-\d{2}-\d{2}$/.test(d)))
+        .sort();
+      const latestTxDate = validDates.length > 0 ? validDates[validDates.length - 1] : undefined;
+      const newDueDate = getNextCardDueDate(latestTxDate, card.due_day);
+      setInvoiceDate(newDueDate);
+      setItems((prev) =>
+        prev.map((item) => ({
+          ...item,
+          creditCardId: cardId,
+          date: newDueDate,
+        }))
+      );
+    } else {
+      setItems((prev) =>
+        prev.map((item) => ({
+          ...item,
+          creditCardId: cardId,
+        }))
+      );
+    }
   };
 
-  // Atualiza a data de vencimento/movimentações para todos os itens
+  // Atualiza a data de vencimento/movimentações para todos os itens em lote
   const handleSetInvoiceDate = (newDate: string) => {
     setInvoiceDate(newDate);
     if (newDate) {
@@ -91,6 +153,13 @@ export function useImportMovements(): UseImportMovementsReturn {
         }))
       );
     }
+  };
+
+  // Atualiza a data de um único item individualmente
+  const handleChangeItemDate = (id: string, newDate: string) => {
+    setItems((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, date: newDate } : item))
+    );
   };
 
   // Faz o parse do conteúdo do arquivo CSV
@@ -113,11 +182,13 @@ export function useImportMovements(): UseImportMovementsReturn {
       setDetectedBank(effectiveBank);
 
       // Auto-seleciona cartão de crédito caso encontre pelo nome do banco
+      let autoCardId = selectedCreditCardId;
       if (effectiveBank === 'INTER') {
         const interCard = creditCards.find((c) =>
           c.description.toLowerCase().includes('inter')
         );
         if (interCard) {
+          autoCardId = interCard.id;
           setSelectedCreditCardId(interCard.id);
         }
       } else if (effectiveBank === 'NUBANK') {
@@ -125,25 +196,49 @@ export function useImportMovements(): UseImportMovementsReturn {
           c.description.toLowerCase().includes('nubank')
         );
         if (nubankCard) {
+          autoCardId = nubankCard.id;
           setSelectedCreditCardId(nubankCard.id);
         }
       }
 
-      // Detecta se o nome do arquivo contém a data de vencimento (ex: Nubank_2026-10-08.csv)
-      const dateMatch = name.match(/(\d{4}-\d{2}-\d{2})/);
-      const initialInvoiceDate = dateMatch ? dateMatch[1] : '';
+      // Calcula a data de vencimento do cartão
+      const targetCard = creditCards.find((c) => c.id === autoCardId);
+      const validDates = result.items
+        .map((i) => i.date || i.originalDate)
+        .filter((d): d is string => Boolean(d && /^\d{4}-\d{2}-\d{2}$/.test(d)))
+        .sort();
+      const latestTxDate = validDates.length > 0 ? validDates[validDates.length - 1] : undefined;
 
-      if (initialInvoiceDate) {
-        setInvoiceDate(initialInvoiceDate);
+      let calculatedDueDate = '';
+      if (targetCard?.due_day) {
+        calculatedDueDate = getNextCardDueDate(latestTxDate, targetCard.due_day);
+      } else {
+        // Fallback: se o nome do arquivo contém a data de vencimento (ex: Nubank_2026-10-08.csv)
+        const dateMatch = name.match(/(\d{4}-\d{2}-\d{2})/);
+        if (dateMatch) {
+          calculatedDueDate = dateMatch[1];
+        }
+      }
+
+      if (calculatedDueDate) {
+        setInvoiceDate(calculatedDueDate);
         setItems(
           result.items.map((item) => ({
             ...item,
-            date: initialInvoiceDate,
+            creditCardId: autoCardId,
+            date: calculatedDueDate,
+            originalDate: item.originalDate || item.date,
           }))
         );
       } else {
         setInvoiceDate('');
-        setItems(result.items);
+        setItems(
+          result.items.map((item) => ({
+            ...item,
+            creditCardId: autoCardId,
+            originalDate: item.originalDate || item.date,
+          }))
+        );
       }
     } catch (err: any) {
       console.error('Erro ao processar arquivo CSV:', err);
@@ -307,10 +402,10 @@ export function useImportMovements(): UseImportMovementsReturn {
       setError(null);
 
       const payload = selectedItems.map((item) => {
-        const finalDate = invoiceDate ? invoiceDate : item.date;
+        const finalDate = item.date || invoiceDate;
         let note = item.notes || (item.isInvoicePayment ? 'Pagamento de fatura importado' : 'Importado via fatura');
 
-        if (invoiceDate && item.originalDate && item.originalDate !== invoiceDate) {
+        if (item.originalDate && item.originalDate !== finalDate) {
           const parts = item.originalDate.split('-');
           const origFormatted = parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : item.originalDate;
           note = `Compra realizada em ${origFormatted} | ${note}`;
@@ -398,6 +493,7 @@ export function useImportMovements(): UseImportMovementsReturn {
     handleDeselectAll,
     handleDeselectDuplicates,
     handleChangeCategory,
+    handleChangeItemDate,
     handleBulkChangeCategory,
     handleResetFile,
     handleConfirmImport,

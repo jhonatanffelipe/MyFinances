@@ -24,6 +24,7 @@ interface ImportTableProps {
   onSelectAllVisible: () => void;
   onDeselectAllVisible: () => void;
   onChangeCategory: (id: string, categoryId: number | null) => void;
+  onChangeItemDate?: (id: string, newDate: string) => void;
 }
 
 export function ImportTable({
@@ -33,6 +34,7 @@ export function ImportTable({
   onSelectAllVisible,
   onDeselectAllVisible,
   onChangeCategory,
+  onChangeItemDate,
 }: ImportTableProps) {
   const formatCurrency = (val: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -85,7 +87,7 @@ export function ImportTable({
                   color="success"
                 />
               </TableCell>
-              <TableCell className="bg-slate-50 text-xs font-bold text-slate-600 uppercase tracking-wider w-28">
+              <TableCell className="bg-slate-50 text-xs font-bold text-slate-600 uppercase tracking-wider w-36">
                 Data
               </TableCell>
               <TableCell className="bg-slate-50 text-xs font-bold text-slate-600 uppercase tracking-wider">
@@ -134,10 +136,15 @@ export function ImportTable({
                   </TableCell>
 
                   {/* Data */}
-                  <TableCell className="text-xs font-mono text-slate-700 whitespace-nowrap">
-                    <span className="font-semibold block">{formatDate(item.date)}</span>
+                  <TableCell className="text-xs font-mono text-slate-700 whitespace-nowrap w-36">
+                    <input
+                      type="date"
+                      value={item.date || ''}
+                      onChange={(e) => onChangeItemDate?.(item.id, e.target.value)}
+                      className="w-full text-xs font-medium text-slate-800 bg-white border border-slate-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 transition-shadow cursor-pointer"
+                    />
                     {item.originalDate && item.originalDate !== item.date && (
-                      <span className="text-[10px] text-slate-400 font-sans block">
+                      <span className="text-[10px] text-slate-400 font-sans block mt-0.5" title={`Data da compra: ${formatDate(item.originalDate)}`}>
                         Compra: {formatDate(item.originalDate)}
                       </span>
                     )}

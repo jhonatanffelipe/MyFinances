@@ -47,7 +47,9 @@ export interface UseImportMovementsReturn {
   handleDeselectAll: () => void;
   handleDeselectDuplicates: () => void;
   handleChangeCategory: (id: string, categoryId: number | null) => void;
+  handleChangeItemDate: (id: string, newDate: string) => void;
   handleBulkChangeCategory: (categoryId: number | null) => void;
   handleResetFile: () => void;
   handleConfirmImport: () => Promise<boolean>;
 }
+

@@ -58,6 +58,7 @@ export function ImportMovementsPage() {
     handleDeselectAll,
     handleDeselectDuplicates,
     handleChangeCategory,
+    handleChangeItemDate,
     handleBulkChangeCategory,
     handleResetFile,
     handleConfirmImport,
@@ -231,6 +232,7 @@ export function ImportMovementsPage() {
             onSelectAllVisible={handleSelectAllVisible}
             onDeselectAllVisible={handleDeselectAllVisible}
             onChangeCategory={handleChangeCategory}
+            onChangeItemDate={handleChangeItemDate}
           />
 
           {/* Barra de Ação Inferior */}
