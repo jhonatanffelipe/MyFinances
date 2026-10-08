@@ -5,6 +5,7 @@ import {
   LayoutDashboard,
   ArrowLeftRight,
   CalendarCheck2,
+  CalendarPlus,
   Tags,
   CreditCard as CreditCardIcon,
   LogOut,
@@ -25,6 +26,7 @@ const navItems: NavItem[] = [
   { label: 'Dashboard', path: '/', icon: LayoutDashboard },
   { label: 'Movimentações', path: '/movements', icon: ArrowLeftRight },
   { label: 'Despesas Fixas', path: '/fixed-expenses', icon: CalendarCheck2 },
+  { label: 'Receitas Fixas', path: '/fixed-incomes', icon: CalendarPlus },
   { label: 'Categorias', path: '/categories', icon: Tags },
   { label: 'Cartões de Crédito', path: '/credit-cards', icon: CreditCardIcon },
 ];
@@ -53,6 +55,10 @@ const PAGE_METADATA: Record<string, { title: string; subtitle: string }> = {
   '/fixed-expenses': {
     title: 'Despesas Fixas',
     subtitle: 'Gerenciamento de contas recorrentes e compromissos mensais.',
+  },
+  '/fixed-incomes': {
+    title: 'Receitas Fixas',
+    subtitle: 'Gerenciamento de entradas recorrentes e recebimentos mensais.',
   },
   '/categories': {
     title: 'Categorias',

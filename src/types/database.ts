@@ -55,6 +55,8 @@ export interface FixedExpense {
   id: number;
   description: string;
   amount: number;
+  /** EXPENSE = despesa fixa; INCOME = receita fixa. */
+  type: TransactionType;
   category_id: number;
   category_name?: string;
   category_color?: string;

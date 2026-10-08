@@ -76,6 +76,7 @@ export function createTablesAndRunMigrations(
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       description TEXT NOT NULL,
       amount REAL NOT NULL,
+      type TEXT NOT NULL DEFAULT 'EXPENSE',
       category_id INTEGER,
       due_day INTEGER NOT NULL,
       start_date TEXT NOT NULL,
@@ -105,6 +106,15 @@ export function createTablesAndRunMigrations(
   ensureColumn(db, queryObjectsFn, 'movements', 'fixed_expense_id', 'INTEGER');
   ensureColumn(db, queryObjectsFn, 'fixed_expenses', 'credit_card_id', 'INTEGER');
   ensureColumn(db, queryObjectsFn, 'fixed_expenses', 'recurrence', "TEXT DEFAULT 'MONTHLY'");
+  // Distingue lançamentos fixos de despesa (padrão) e de receita
+  ensureColumn(db, queryObjectsFn, 'fixed_expenses', 'type', "TEXT NOT NULL DEFAULT 'EXPENSE'");
+
+  // Garante que registros antigos fiquem explicitamente marcados como despesa
+  try {
+    db.run("UPDATE fixed_expenses SET type = 'EXPENSE' WHERE type IS NULL OR type = ''");
+  } catch (err) {
+    console.error('Erro ao normalizar fixed_expenses.type:', err);
+  }
 
   // ---- Campos de Perfil de Usuário ----
   ensureColumn(db, queryObjectsFn, 'users', 'email', 'TEXT');

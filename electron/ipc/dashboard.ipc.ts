@@ -36,7 +36,8 @@ export function registerDashboardIpc() {
 
     const fixedExpensesTotal = queryObject(
       `SELECT SUM(amount) AS total FROM fixed_expenses
-       WHERE active = 1 AND start_date <= ? AND (end_date IS NULL OR end_date >= ?)`,
+       WHERE active = 1 AND COALESCE(type, 'EXPENSE') = 'EXPENSE'
+         AND start_date <= ? AND (end_date IS NULL OR end_date >= ?)`,
       [period.end, period.start]
     )?.total || 0;
 
@@ -76,7 +77,8 @@ export function registerDashboardIpc() {
        FROM fixed_expenses f
        LEFT JOIN categories c ON f.category_id = c.id
        LEFT JOIN fixed_expense_payments p ON p.fixed_expense_id = f.id AND p.year_month = ?
-       WHERE f.active = 1 AND f.start_date <= ? AND (f.end_date IS NULL OR f.end_date >= ?)
+       WHERE f.active = 1 AND COALESCE(f.type, 'EXPENSE') = 'EXPENSE'
+         AND f.start_date <= ? AND (f.end_date IS NULL OR f.end_date >= ?)
        ORDER BY f.due_day ASC`,
       [period.yearMonth, period.end, period.start]
     ).map((f) => {
@@ -97,7 +99,8 @@ export function registerDashboardIpc() {
 
       const row = queryObject(
         `SELECT SUM(amount) AS total FROM fixed_expenses
-         WHERE active = 1 AND start_date <= ? AND (end_date IS NULL OR end_date >= ?)`,
+         WHERE active = 1 AND COALESCE(type, 'EXPENSE') = 'EXPENSE'
+           AND start_date <= ? AND (end_date IS NULL OR end_date >= ?)`,
         [p.end, p.start]
       );
 

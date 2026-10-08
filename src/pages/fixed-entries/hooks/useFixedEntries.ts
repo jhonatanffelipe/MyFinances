@@ -1,9 +1,16 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Category, CreditCard, FixedExpense } from '../../../types/database';
-import { FixedExpenseFormData } from '../constants';
+import { Category, CreditCard, FixedExpense, TransactionType } from '../../../types/database';
+import { FIXED_ENTRY_COPY, FixedEntryFormData } from '../constants';
 
-export function useFixedExpenses() {
-  const [fixedExpenses, setFixedExpenses] = useState<FixedExpense[]>([]);
+/**
+ * Hook compartilhado pelas telas de Despesas Fixas e Receitas Fixas.
+ * O parâmetro `type` define quais registros são listados e qual tipo de
+ * movimento o backend gera para o período informado.
+ */
+export function useFixedEntries(type: TransactionType = 'EXPENSE') {
+  const copy = FIXED_ENTRY_COPY[type];
+
+  const [fixedEntries, setFixedEntries] = useState<FixedExpense[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [creditCards, setCreditCards] = useState<CreditCard[]>([]);
   const [loading, setLoading] = useState(true);
@@ -17,24 +24,27 @@ export function useFixedExpenses() {
   const [orderDirection, setOrderDirection] = useState<'asc' | 'desc'>('asc');
 
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedExpense, setSelectedExpense] = useState<FixedExpense | null>(null);
+  const [selectedEntry, setSelectedEntry] = useState<FixedExpense | null>(null);
 
   const fetchDependencies = useCallback(async () => {
     try {
       if (window.electronAPI) {
         const [catRes, cardRes] = await Promise.all([
           window.electronAPI.getCategories({ perPage: 9999 }),
-          window.electronAPI.getCreditCards({ perPage: 9999 }),
+          // Cartão de crédito só é usado em despesas
+          copy.showCreditCard
+            ? window.electronAPI.getCreditCards({ perPage: 9999 })
+            : Promise.resolve({ data: [] as CreditCard[], total: 0, currentPage: 0, perPage: 0 }),
         ]);
-        setCategories(catRes.data.filter((c) => c.type === 'EXPENSE'));
+        setCategories(catRes.data.filter((c) => c.type === type));
         setCreditCards(cardRes.data);
       }
     } catch (err: any) {
-      console.error('Error fetching dependencies for fixed expenses:', err);
+      console.error('Error fetching dependencies for fixed entries:', err);
     }
-  }, []);
+  }, [type, copy.showCreditCard]);
 
-  const fetchFixedExpenses = useCallback(
+  const fetchFixedEntries = useCallback(
     async (
       page = currentPage,
       limit = perPage,
@@ -52,62 +62,68 @@ export function useFixedExpenses() {
             search: searchQuery,
             orderField: field,
             orderDirection: direction,
+            type,
           });
-          setFixedExpenses(res.data);
+          setFixedEntries(res.data);
           setTotalRows(res.total);
         }
       } catch (err: any) {
-        setError(err.message || 'Erro ao carregar despesas fixas');
+        setError(err.message || 'Erro ao carregar lançamentos fixos');
       } finally {
         setLoading(false);
       }
     },
-    [currentPage, perPage, search, orderField, orderDirection]
+    [currentPage, perPage, search, orderField, orderDirection, type]
   );
 
+  // Recarrega do zero sempre que a tela troca de tipo (despesa <-> receita)
   useEffect(() => {
+    setCurrentPage(0);
+    setSearch('');
     fetchDependencies();
-    fetchFixedExpenses(currentPage, perPage, search, orderField, orderDirection);
-  }, []);
+    fetchFixedEntries(0, perPage, '', orderField, orderDirection);
+  }, [type]);
 
   const handlePagination = useCallback(
     async (newPerPage: number, newPage: number, field: string, direction: 'asc' | 'desc') => {
       setPerPage(newPerPage);
       setCurrentPage(newPage);
-      await fetchFixedExpenses(newPage, newPerPage, search, field || orderField, direction || orderDirection);
+      await fetchFixedEntries(newPage, newPerPage, search, field || orderField, direction || orderDirection);
     },
-    [fetchFixedExpenses, search, orderField, orderDirection]
+    [fetchFixedEntries, search, orderField, orderDirection]
   );
 
   const handleSearchChange = (val: string) => {
     setSearch(val);
     setCurrentPage(0);
-    fetchFixedExpenses(0, perPage, val, orderField, orderDirection);
+    fetchFixedEntries(0, perPage, val, orderField, orderDirection);
   };
 
   const handleOpenCreate = () => {
-    setSelectedExpense(null);
+    setSelectedEntry(null);
     setIsModalOpen(true);
   };
 
-  const handleOpenEdit = (exp: FixedExpense) => {
-    setSelectedExpense(exp);
+  const handleOpenEdit = (entry: FixedExpense) => {
+    setSelectedEntry(entry);
     setIsModalOpen(true);
   };
 
   const handleCloseModal = () => {
-    setSelectedExpense(null);
+    setSelectedEntry(null);
     setIsModalOpen(false);
   };
 
-  const handleSubmitExpense = async (formData: FixedExpenseFormData) => {
+  const handleSubmitEntry = async (formData: FixedEntryFormData) => {
     try {
       if (!window.electronAPI) return;
       const payload = {
         description: formData.description,
         amount: Number(formData.amount),
+        type,
         category_id: Number(formData.category_id),
-        credit_card_id: formData.credit_card_id ? Number(formData.credit_card_id) : null,
+        credit_card_id:
+          copy.showCreditCard && formData.credit_card_id ? Number(formData.credit_card_id) : null,
         recurrence: (formData.recurrence || 'MONTHLY') as any,
         due_day: Number(formData.due_day),
         start_date: formData.start_date,
@@ -116,38 +132,34 @@ export function useFixedExpenses() {
         notes: formData.notes || '',
       };
 
-      if (selectedExpense) {
-        await window.electronAPI.updateFixedExpense(selectedExpense.id, payload);
+      if (selectedEntry) {
+        await window.electronAPI.updateFixedExpense(selectedEntry.id, payload);
       } else {
         await window.electronAPI.createFixedExpense(payload);
       }
       handleCloseModal();
-      await fetchFixedExpenses(currentPage, perPage, search, orderField, orderDirection);
+      await fetchFixedEntries(currentPage, perPage, search, orderField, orderDirection);
     } catch (err: any) {
-      setError(err.message || 'Erro ao salvar despesa fixa');
+      setError(err.message || 'Erro ao salvar lançamento fixo');
     }
   };
 
-  const handleDeleteExpense = async (id: number) => {
-    if (
-      !window.confirm(
-        'Tem certeza que deseja excluir esta despesa fixa?\nTodos os movimentos vinculados também serão removidos.'
-      )
-    ) {
-      return;
-    }
+  const handleDeleteEntry = async (id: number) => {
+    if (!window.confirm(copy.deleteConfirm)) return;
     try {
       if (window.electronAPI) {
         await window.electronAPI.deleteFixedExpense(id);
-        await fetchFixedExpenses(currentPage, perPage, search, orderField, orderDirection);
+        await fetchFixedEntries(currentPage, perPage, search, orderField, orderDirection);
       }
     } catch (err: any) {
-      setError(err.message || 'Erro ao excluir despesa fixa');
+      setError(err.message || 'Erro ao excluir lançamento fixo');
     }
   };
 
   return {
-    fixedExpenses,
+    copy,
+    type,
+    fixedEntries,
     categories,
     creditCards,
     loading,
@@ -165,12 +177,12 @@ export function useFixedExpenses() {
     handlePagination,
     handleSearchChange,
     isModalOpen,
-    selectedExpense,
+    selectedEntry,
     handleOpenCreate,
     handleOpenEdit,
     handleCloseModal,
-    handleSubmitExpense,
-    handleDeleteExpense,
-    refetch: () => fetchFixedExpenses(currentPage, perPage, search, orderField, orderDirection),
+    handleSubmitEntry,
+    handleDeleteEntry,
+    refetch: () => fetchFixedEntries(currentPage, perPage, search, orderField, orderDirection),
   };
 }

@@ -313,7 +313,7 @@ export function analyzeImportItems(
     ? queryObjects('SELECT id, description, amount, date, credit_card_id, fixed_expense_id FROM movements')
     : [];
   const activeFixedExpenses: any[] = db
-    ? queryObjects('SELECT id, description, amount, due_day, active FROM fixed_expenses WHERE active = 1')
+    ? queryObjects("SELECT id, description, amount, due_day, active FROM fixed_expenses WHERE active = 1 AND COALESCE(type, 'EXPENSE') = 'EXPENSE'")
     : [];
 
   let duplicateCount = 0;

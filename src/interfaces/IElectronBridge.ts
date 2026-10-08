@@ -7,6 +7,7 @@ import {
   FixedExpense,
   Movement,
   MovementFilters,
+  TransactionType,
 } from '../types/database';
 
 export const IPC_CHANNELS = {
@@ -166,7 +167,9 @@ export interface IElectronAPI {
   executeImportMovements: (params: ImportExecuteParams) => Promise<ImportExecuteResult>;
 
   // Despesas fixas (paginado)
-  getFixedExpenses: (params?: PaginationParams & { yearMonth?: string }) => Promise<PaginatedResult<FixedExpense>>;
+  getFixedExpenses: (
+    params?: PaginationParams & { yearMonth?: string; type?: TransactionType }
+  ) => Promise<PaginatedResult<FixedExpense>>;
   createFixedExpense: (expense: Omit<FixedExpense, 'id' | 'created_at'>) => Promise<FixedExpense>;
   updateFixedExpense: (id: number, expense: Partial<FixedExpense>) => Promise<boolean>;
   deleteFixedExpense: (id: number) => Promise<boolean>;

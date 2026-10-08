@@ -18,9 +18,11 @@ import {
 import { MoreVertical, Search, Filter, Edit2, Trash2 } from 'lucide-react';
 import { FixedExpense } from '../../../types/database';
 import TablePagination from '../../../components/Table/TablePagination';
+import { FixedEntryCopy } from '../constants';
 
-interface FixedExpenseTableProps {
-  fixedExpenses: FixedExpense[];
+interface FixedEntryTableProps {
+  copy: FixedEntryCopy;
+  entries: FixedExpense[];
   loading: boolean;
   totalRows: number;
   currentPage: number;
@@ -37,12 +39,13 @@ interface FixedExpenseTableProps {
     orderDirection: 'asc' | 'desc'
   ) => Promise<void> | void;
   handleSearchChange: (value: string) => void;
-  onEdit: (exp: FixedExpense) => void;
+  onEdit: (entry: FixedExpense) => void;
   onDelete: (id: number) => void;
 }
 
-export function FixedExpenseTable({
-  fixedExpenses,
+export function FixedEntryTable({
+  copy,
+  entries,
   loading,
   totalRows,
   currentPage,
@@ -56,25 +59,25 @@ export function FixedExpenseTable({
   handleSearchChange,
   onEdit,
   onDelete,
-}: FixedExpenseTableProps) {
+}: FixedEntryTableProps) {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const [activeExpense, setActiveExpense] = useState<FixedExpense | null>(null);
+  const [activeEntry, setActiveEntry] = useState<FixedExpense | null>(null);
 
   const formatCurrency = (val: number) => {
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
   };
 
-  const handleOpenMenu = (event: React.MouseEvent<HTMLElement>, exp: FixedExpense) => {
+  const handleOpenMenu = (event: React.MouseEvent<HTMLElement>, entry: FixedExpense) => {
     setAnchorEl(event.currentTarget);
-    setActiveExpense(exp);
+    setActiveEntry(entry);
   };
 
   const handleCloseMenu = () => {
     setAnchorEl(null);
-    setActiveExpense(null);
+    setActiveEntry(null);
   };
 
-  if (loading && fixedExpenses.length === 0) {
+  if (loading && entries.length === 0) {
     return (
       <div className="flex justify-center items-center py-20">
         <CircularProgress color="success" />
@@ -90,7 +93,7 @@ export function FixedExpenseTable({
           <TextField
             size="small"
             fullWidth
-            placeholder="Buscar por descrição ou categoria"
+            placeholder={copy.searchPlaceholder}
             value={search}
             onChange={(e) => handleSearchChange(e.target.value)}
             InputProps={{
@@ -114,7 +117,7 @@ export function FixedExpenseTable({
             Filtros avançados
           </Button>
           <span className="text-xs text-slate-400 font-medium">
-            {totalRows} {totalRows === 1 ? 'conta cadastrada' : 'contas cadastradas'}
+            {totalRows} {totalRows === 1 ? copy.countSingular : copy.countPlural}
           </span>
         </div>
       </div>
@@ -129,7 +132,7 @@ export function FixedExpenseTable({
                   Ações
                 </TableCell>
                 <TableCell width={80} className="font-bold text-xs text-slate-500 uppercase">
-                  Venc.
+                  {copy.dayColumn}
                 </TableCell>
                 <TableCell className="font-bold text-xs text-slate-500 uppercase">
                   Descrição
@@ -141,19 +144,19 @@ export function FixedExpenseTable({
                   Recorrência
                 </TableCell>
                 <TableCell width={160} className="font-bold text-xs text-slate-500 uppercase text-right">
-                  Valor estimado
+                  {copy.amountColumn}
                 </TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {fixedExpenses.length === 0 ? (
+              {entries.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={6} className="text-center py-12 text-slate-400 text-sm">
-                    Nenhuma despesa fixa encontrada.
+                    {copy.emptyMessage}
                   </TableCell>
                 </TableRow>
               ) : (
-                fixedExpenses.map((row) => (
+                entries.map((row) => (
                   <TableRow key={row.id} hover className="transition-colors">
                     <TableCell>
                       <IconButton
@@ -165,12 +168,12 @@ export function FixedExpenseTable({
                       </IconButton>
                     </TableCell>
                     <TableCell className="font-bold text-xs text-slate-600 font-mono">
-                      Dia {String(row.due_day).padStart(2, '0')}
+                      {copy.dayPrefix} {String(row.due_day).padStart(2, '0')}
                     </TableCell>
                     <TableCell>
                       <div>
                         <p className="font-semibold text-slate-800 text-sm">{row.description}</p>
-                        {row.credit_card_name && (
+                        {copy.showCreditCard && row.credit_card_name && (
                           <span
                             className="inline-block text-[10px] font-bold px-1.5 py-0.5 rounded mt-0.5"
                             style={{
@@ -187,7 +190,7 @@ export function FixedExpenseTable({
                       <div className="flex items-center gap-2">
                         <span
                           className="w-2.5 h-2.5 rounded-full"
-                          style={{ backgroundColor: row.category_color || '#ea580c' }}
+                          style={{ backgroundColor: row.category_color || '#94a3b8' }}
                         />
                         <span className="text-sm text-slate-600">{row.category_name || 'Sem categoria'}</span>
                       </div>
@@ -200,7 +203,7 @@ export function FixedExpenseTable({
                       {row.recurrence === 'ANNUAL' && 'Anual'}
                       {!row.recurrence && 'Mensal'}
                     </TableCell>
-                    <TableCell className="text-sm font-bold text-slate-900 text-right font-mono">
+                    <TableCell className={`text-sm font-bold text-right font-mono ${copy.amountClassName}`}>
                       {formatCurrency(row.amount)}
                     </TableCell>
                   </TableRow>
@@ -233,7 +236,7 @@ export function FixedExpenseTable({
       >
         <MenuItem
           onClick={() => {
-            if (activeExpense) onEdit(activeExpense);
+            if (activeEntry) onEdit(activeEntry);
             handleCloseMenu();
           }}
           className="text-xs font-semibold text-slate-700 flex items-center gap-2 py-2"
@@ -242,7 +245,7 @@ export function FixedExpenseTable({
         </MenuItem>
         <MenuItem
           onClick={() => {
-            if (activeExpense) onDelete(activeExpense.id);
+            if (activeEntry) onDelete(activeEntry.id);
             handleCloseMenu();
           }}
           className="text-xs font-semibold text-red-600 flex items-center gap-2 py-2"

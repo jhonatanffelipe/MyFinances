@@ -12,33 +12,47 @@ import {
   MenuItem,
   Select,
   IconButton,
-  InputAdornment,
 } from '@mui/material';
 import { X } from 'lucide-react';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import dayjs from 'dayjs';
 import { Category, CreditCard, FixedExpense } from '../../../types/database';
-import { fixedExpenseSchema, FixedExpenseFormData } from '../constants';
+import { fixedEntrySchema, FixedEntryFormData, FixedEntryCopy } from '../constants';
 import { MaskedNumberField } from '../../../components/MaskedField/MaskedNumberField';
 
-interface FixedExpenseModalProps {
+interface FixedEntryModalProps {
+  copy: FixedEntryCopy;
   open: boolean;
-  expense: FixedExpense | null;
+  entry: FixedExpense | null;
   categories: Category[];
   creditCards: CreditCard[];
   onClose: () => void;
-  onSubmit: (data: FixedExpenseFormData) => Promise<void>;
+  onSubmit: (data: FixedEntryFormData) => Promise<void>;
 }
 
-export function FixedExpenseModal({
+export function FixedEntryModal({
+  copy,
   open,
-  expense,
+  entry,
   categories,
   creditCards,
   onClose,
   onSubmit,
-}: FixedExpenseModalProps) {
+}: FixedEntryModalProps) {
   const todayStr = new Date().toISOString().split('T')[0];
+
+  const emptyValues = {
+    description: '',
+    amount: '' as any,
+    due_day: 10,
+    start_date: todayStr,
+    end_date: '',
+    category_id: '' as any,
+    credit_card_id: '' as any,
+    recurrence: 'MONTHLY',
+    active: 1,
+    notes: '',
+  };
 
   const {
     register,
@@ -46,51 +60,29 @@ export function FixedExpenseModal({
     control,
     reset,
     formState: { errors, isSubmitting },
-  } = useForm<FixedExpenseFormData>({
-    resolver: yupResolver(fixedExpenseSchema) as any,
-    defaultValues: {
-      description: '',
-      amount: '' as any,
-      due_day: 10,
-      start_date: todayStr,
-      end_date: '',
-      category_id: '' as any,
-      credit_card_id: '' as any,
-      recurrence: 'MONTHLY',
-      active: 1,
-      notes: '',
-    },
+  } = useForm<FixedEntryFormData>({
+    resolver: yupResolver(fixedEntrySchema) as any,
+    defaultValues: emptyValues,
   });
 
   useEffect(() => {
-    if (expense) {
+    if (entry) {
       reset({
-        description: expense.description,
-        amount: expense.amount,
-        due_day: expense.due_day,
-        start_date: expense.start_date,
-        end_date: expense.end_date || '',
-        category_id: expense.category_id,
-        credit_card_id: expense.credit_card_id || ('' as any),
-        recurrence: expense.recurrence || 'MONTHLY',
-        active: expense.active,
-        notes: expense.notes || '',
+        description: entry.description,
+        amount: entry.amount,
+        due_day: entry.due_day,
+        start_date: entry.start_date,
+        end_date: entry.end_date || '',
+        category_id: entry.category_id,
+        credit_card_id: entry.credit_card_id || ('' as any),
+        recurrence: entry.recurrence || 'MONTHLY',
+        active: entry.active,
+        notes: entry.notes || '',
       });
     } else {
-      reset({
-        description: '',
-        amount: '' as any,
-        due_day: 10,
-        start_date: todayStr,
-        end_date: '',
-        category_id: '' as any,
-        credit_card_id: '' as any,
-        recurrence: 'MONTHLY',
-        active: 1,
-        notes: '',
-      });
+      reset(emptyValues);
     }
-  }, [expense, open, reset]);
+  }, [entry, open, reset]);
 
   return (
     <Dialog
@@ -105,11 +97,9 @@ export function FixedExpenseModal({
       <div className="flex items-center justify-between px-6 pt-4 pb-2">
         <div>
           <DialogTitle className="p-0 font-bold text-xl text-slate-900 leading-tight">
-            {expense ? 'Editar despesa fixa' : 'Nova despesa fixa'}
+            {entry ? copy.modalEditTitle : copy.modalCreateTitle}
           </DialogTitle>
-          <p className="text-xs text-slate-500 mt-1">
-            Cadastre uma nova despesa recorrente para acompanhamento mensal.
-          </p>
+          <p className="text-xs text-slate-500 mt-1">{copy.modalSubtitle}</p>
         </div>
         <IconButton size="small" onClick={onClose} className="text-slate-400 hover:text-slate-700">
           <X className="w-5 h-5" />
@@ -118,10 +108,10 @@ export function FixedExpenseModal({
 
       <form onSubmit={handleSubmit(onSubmit as any)}>
         <DialogContent className="space-y-4 px-6 pt-2 pb-4">
-          {/* Nome da despesa */}
+          {/* Nome do lançamento */}
           <div>
             <label className="text-xs font-semibold text-slate-700 block mb-1.5">
-              Nome da despesa
+              {copy.nameLabel}
             </label>
             <TextField
               {...register('description')}
@@ -129,16 +119,16 @@ export function FixedExpenseModal({
               size="small"
               error={!!errors.description}
               helperText={errors.description?.message}
-              placeholder="Ex: Conta de luz, Netflix, Aluguel..."
+              placeholder={copy.namePlaceholder}
               variant="outlined"
             />
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {/* Valor estimado */}
+            {/* Valor */}
             <div>
               <label className="text-xs font-semibold text-slate-700 block mb-1.5">
-                Valor estimado
+                {copy.amountLabel}
               </label>
               <MaskedNumberField
                 control={control}
@@ -148,16 +138,16 @@ export function FixedExpenseModal({
               />
             </div>
 
-            {/* Vencimento */}
+            {/* Dia de vencimento / recebimento */}
             <div>
               <label className="text-xs font-semibold text-slate-700 block mb-1.5">
-                Vencimento
+                {copy.dayLabel}
               </label>
               <MaskedNumberField
                 control={control}
                 name="due_day"
                 variant="day"
-                placeholder="Dia (1 a 31)"
+                placeholder={copy.dayPlaceholder}
               />
             </div>
           </div>
@@ -248,7 +238,7 @@ export function FixedExpenseModal({
                           <span className="flex items-center gap-2">
                             <span
                               className="w-2.5 h-2.5 rounded-full inline-block"
-                              style={{ backgroundColor: cat.color || '#ea580c' }}
+                              style={{ backgroundColor: cat.color || '#94a3b8' }}
                             />
                             {cat.name}
                           </span>
@@ -283,42 +273,41 @@ export function FixedExpenseModal({
             </div>
           </div>
 
-          {/* Cartão de crédito opcional */}
-          <div>
-            <label className="text-xs font-semibold text-slate-700 block mb-1.5">
-              Cartão de crédito (opcional)
-            </label>
-            <Controller
-              name="credit_card_id"
-              control={control}
-              render={({ field }) => (
-                <FormControl size="small" fullWidth>
-                  <Select {...field} displayEmpty variant="outlined">
-                    <MenuItem value="">
-                      <span className="text-slate-500">Nenhum / pagamento direto</span>
-                    </MenuItem>
-                    {creditCards.map((card) => (
-                      <MenuItem key={card.id} value={card.id}>
-                        <span className="flex items-center gap-2">
-                          <span
-                            className="w-2.5 h-2.5 rounded-full inline-block"
-                            style={{ backgroundColor: card.color || '#8b5cf6' }}
-                          />
-                          {card.description}
-                        </span>
+          {/* Cartão de crédito — apenas para despesas fixas */}
+          {copy.showCreditCard && (
+            <div>
+              <label className="text-xs font-semibold text-slate-700 block mb-1.5">
+                Cartão de crédito (opcional)
+              </label>
+              <Controller
+                name="credit_card_id"
+                control={control}
+                render={({ field }) => (
+                  <FormControl size="small" fullWidth>
+                    <Select {...field} displayEmpty variant="outlined">
+                      <MenuItem value="">
+                        <span className="text-slate-500">Nenhum / pagamento direto</span>
                       </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              )}
-            />
-          </div>
+                      {creditCards.map((card) => (
+                        <MenuItem key={card.id} value={card.id}>
+                          <span className="flex items-center gap-2">
+                            <span
+                              className="w-2.5 h-2.5 rounded-full inline-block"
+                              style={{ backgroundColor: card.color || '#8b5cf6' }}
+                            />
+                            {card.description}
+                          </span>
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                )}
+              />
+            </div>
+          )}
         </DialogContent>
 
-        <div className="px-6 pb-2 text-[11px] text-slate-400">
-          Campos obrigatórios: nome, valor, vencimento, categoria, data de início e data de fim.
-          Os movimentos serão criados automaticamente para cada mês do período.
-        </div>
+        <div className="px-6 pb-2 text-[11px] text-slate-400">{copy.footerHint}</div>
 
         <DialogActions className="px-6 pb-5 pt-2 border-t border-slate-100 flex justify-end gap-2">
           <Button
@@ -336,7 +325,7 @@ export function FixedExpenseModal({
             disabled={isSubmitting}
             className="rounded-xl normal-case font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-none"
           >
-            {isSubmitting ? 'Salvando...' : expense ? 'Atualizar despesa' : 'Salvar despesa fixa'}
+            {isSubmitting ? 'Salvando...' : entry ? copy.submitEdit : copy.submitCreate}
           </Button>
         </DialogActions>
       </form>
