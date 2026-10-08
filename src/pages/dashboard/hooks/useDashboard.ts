@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import dayjs from 'dayjs';
 import { DashboardData } from '../../../types/database';
 import { getCurrentYearMonth } from '../constants';
 
@@ -27,9 +28,30 @@ export function useDashboard() {
     fetchDashboardData();
   }, [fetchDashboardData]);
 
+  const handlePreviousMonth = useCallback(() => {
+    setSelectedYearMonth((prev) => {
+      const current = prev ? dayjs(`${prev}-01`) : dayjs();
+      return current.subtract(1, 'month').format('YYYY-MM');
+    });
+  }, []);
+
+  const handleNextMonth = useCallback(() => {
+    setSelectedYearMonth((prev) => {
+      const current = prev ? dayjs(`${prev}-01`) : dayjs();
+      return current.add(1, 'month').format('YYYY-MM');
+    });
+  }, []);
+
+  const handleCurrentMonth = useCallback(() => {
+    setSelectedYearMonth(dayjs().format('YYYY-MM'));
+  }, []);
+
   return {
     selectedYearMonth,
     setSelectedYearMonth,
+    handlePreviousMonth,
+    handleNextMonth,
+    handleCurrentMonth,
     data,
     loading,
     error,

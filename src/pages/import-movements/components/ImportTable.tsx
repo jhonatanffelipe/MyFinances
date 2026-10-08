@@ -12,6 +12,7 @@ import {
   MenuItem,
   FormControl,
   Tooltip,
+  ListSubheader,
 } from '@mui/material';
 import { AlertTriangle, ArrowDownLeft, CheckCircle2 } from 'lucide-react';
 import { ImportPreviewItem } from '../../../interfaces/IElectronBridge';
@@ -176,17 +177,42 @@ export function ImportTable({
                         <MenuItem value="" className="text-xs text-slate-400">
                           <em>(Sem categoria)</em>
                         </MenuItem>
-                        {categories.map((cat) => (
-                          <MenuItem key={cat.id} value={cat.id} className="text-xs">
-                            <div className="flex items-center gap-2">
-                              <span
-                                className="w-2.5 h-2.5 rounded-full flex-shrink-0"
-                                style={{ backgroundColor: cat.color || '#94a3b8' }}
-                              />
-                              <span className="truncate">{cat.name}</span>
-                            </div>
-                          </MenuItem>
-                        ))}
+                        {categories.some((c) => c.type === 'EXPENSE') && (
+                          <ListSubheader className="text-[10px] font-bold text-rose-700 bg-rose-50/70 py-0.5 leading-tight">
+                            Despesas
+                          </ListSubheader>
+                        )}
+                        {categories
+                          .filter((c) => c.type === 'EXPENSE')
+                          .map((cat) => (
+                            <MenuItem key={cat.id} value={cat.id} className="text-xs">
+                              <div className="flex items-center gap-2">
+                                <span
+                                  className="w-2 h-2 rounded-full flex-shrink-0"
+                                  style={{ backgroundColor: cat.color || '#94a3b8' }}
+                                />
+                                <span className="truncate">{cat.name}</span>
+                              </div>
+                            </MenuItem>
+                          ))}
+                        {categories.some((c) => c.type === 'INCOME') && (
+                          <ListSubheader className="text-[10px] font-bold text-emerald-700 bg-emerald-50/70 py-0.5 leading-tight">
+                            Receitas
+                          </ListSubheader>
+                        )}
+                        {categories
+                          .filter((c) => c.type === 'INCOME')
+                          .map((cat) => (
+                            <MenuItem key={cat.id} value={cat.id} className="text-xs">
+                              <div className="flex items-center gap-2">
+                                <span
+                                  className="w-2 h-2 rounded-full flex-shrink-0"
+                                  style={{ backgroundColor: cat.color || '#94a3b8' }}
+                                />
+                                <span className="truncate">{cat.name}</span>
+                              </div>
+                            </MenuItem>
+                          ))}
                       </Select>
                     </FormControl>
                   </TableCell>

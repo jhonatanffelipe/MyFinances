@@ -14,12 +14,14 @@ export function CategoriesPage() {
     currentPage,
     perPage,
     search,
+    typeFilter,
     orderField,
     orderDirection,
     setCurrentPage,
     setPerPage,
     handlePagination,
     handleSearchChange,
+    handleTypeFilterChange,
     isModalOpen,
     selectedCategory,
     handleOpenCreate,
@@ -63,12 +65,14 @@ export function CategoriesPage() {
         currentPage={currentPage}
         perPage={perPage}
         search={search}
+        typeFilter={typeFilter}
         orderField={orderField}
         orderDirection={orderDirection}
         setCurrentPage={setCurrentPage}
         setPerPage={setPerPage}
         handlePagination={handlePagination}
         handleSearchChange={handleSearchChange}
+        onTypeFilterChange={handleTypeFilterChange}
         onEdit={handleOpenEdit}
         onDelete={handleDeleteCategory}
       />

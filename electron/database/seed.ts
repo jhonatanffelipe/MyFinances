@@ -18,6 +18,14 @@ export function seedInitialCategories(
       ['Lazer', 'EXPENSE', '#f59e0b', 'Smile'],
       ['Saúde', 'EXPENSE', '#ec4899', 'Heart'],
       ['Educação', 'EXPENSE', '#8b5cf6', 'BookOpen'],
+      ['Agilios', 'EXPENSE', '#0ea5e9', 'Briefcase'],
+      ['Investimentos', 'EXPENSE', '#8b5cf6', 'TrendingUp'],
+      ['Empréstimos e Financiamentos', 'EXPENSE', '#ef4444', 'Landmark'],
+      ['Compras e Eletrônicos', 'EXPENSE', '#f97316', 'ShoppingBag'],
+      ['Assinaturas e Serviços', 'EXPENSE', '#06b6d4', 'Tv'],
+      ['Cuidados Pessoais', 'EXPENSE', '#ec4899', 'Sparkles'],
+      ['Vestuário e Calçados', 'EXPENSE', '#14b8a6', 'Shirt'],
+      ['Cartão e Encargos', 'EXPENSE', '#a855f7', 'CreditCard'],
       ['Outras Despesas', 'EXPENSE', '#94a3b8', 'Tag'],
     ];
 

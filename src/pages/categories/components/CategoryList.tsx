@@ -15,7 +15,7 @@ import {
   InputAdornment,
   Button,
 } from '@mui/material';
-import { MoreVertical, Search, Filter, Edit2, Trash2 } from 'lucide-react';
+import { MoreVertical, Search, Filter, Edit2, Trash2, ArrowDownRight, ArrowUpRight } from 'lucide-react';
 import { Category } from '../../../types/database';
 import TablePagination from '../../../components/Table/TablePagination';
 
@@ -26,6 +26,7 @@ interface CategoryListProps {
   currentPage: number;
   perPage: number;
   search: string;
+  typeFilter?: 'ALL' | 'INCOME' | 'EXPENSE';
   orderField?: string;
   orderDirection?: 'asc' | 'desc';
   setCurrentPage: React.Dispatch<React.SetStateAction<number>>;
@@ -37,6 +38,7 @@ interface CategoryListProps {
     orderDirection: 'asc' | 'desc'
   ) => Promise<void> | void;
   handleSearchChange: (value: string) => void;
+  onTypeFilterChange?: (type: 'ALL' | 'INCOME' | 'EXPENSE') => void;
   onEdit: (cat: Category) => void;
   onDelete: (id: number) => void;
 }
@@ -48,12 +50,14 @@ export function CategoryList({
   currentPage,
   perPage,
   search,
+  typeFilter = 'ALL',
   orderField = 'name',
   orderDirection = 'asc',
   setCurrentPage,
   setPerPage,
   handlePagination,
   handleSearchChange,
+  onTypeFilterChange,
   onEdit,
   onDelete,
 }: CategoryListProps) {
@@ -75,7 +79,31 @@ export function CategoryList({
     setActiveCategory(null);
   };
 
-  const renderStatusBadge = (limit?: number | null, consumed: number = 0) => {
+  const renderStatusBadge = (type: string, limit?: number | null, consumed: number = 0) => {
+    if (type === 'INCOME') {
+      if (!limit || limit <= 0) {
+        return (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-600">
+            Sem meta
+          </span>
+        );
+      }
+      const ratio = consumed / limit;
+      if (ratio >= 1) {
+        return (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800">
+            Meta atingida
+          </span>
+        );
+      }
+      return (
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-700">
+          Progresso ({Math.round(ratio * 100)}%)
+        </span>
+      );
+    }
+
+    // EXPENSE
     if (!limit || limit <= 0) {
       return (
         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-600">
@@ -123,34 +151,67 @@ export function CategoryList({
   return (
     <div className="space-y-4">
       {/* Search and Filters Header */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-white p-3 rounded-2xl border border-slate-100 shadow-sm">
-        <div className="w-full sm:w-80">
-          <TextField
-            size="small"
-            fullWidth
-            placeholder="Buscar por nome ou ícone"
-            value={search}
-            onChange={(e) => handleSearchChange(e.target.value)}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <Search className="w-4 h-4 text-slate-400" />
-                </InputAdornment>
-              ),
-              className: 'rounded-xl bg-slate-50/50 text-sm',
-            }}
-          />
+      <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 bg-white p-3 rounded-2xl border border-slate-100 shadow-sm">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 flex-1">
+          <div className="w-full sm:w-72">
+            <TextField
+              size="small"
+              fullWidth
+              placeholder="Buscar por nome ou descrição..."
+              value={search}
+              onChange={(e) => handleSearchChange(e.target.value)}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <Search className="w-4 h-4 text-slate-400" />
+                  </InputAdornment>
+                ),
+                className: 'rounded-xl bg-slate-50/50 text-sm',
+              }}
+            />
+          </div>
+
+          {/* Abas / Segmented Control: Todas | Despesas | Receitas */}
+          <div className="flex items-center gap-1 bg-slate-100/80 p-1 rounded-xl self-start sm:self-auto">
+            <button
+              type="button"
+              onClick={() => onTypeFilterChange?.('ALL')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                typeFilter === 'ALL'
+                  ? 'bg-white text-slate-800 shadow-sm'
+                  : 'text-slate-500 hover:text-slate-800'
+              }`}
+            >
+              Todas
+            </button>
+            <button
+              type="button"
+              onClick={() => onTypeFilterChange?.('EXPENSE')}
+              className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                typeFilter === 'EXPENSE'
+                  ? 'bg-rose-50 text-rose-700 shadow-sm border border-rose-200/80'
+                  : 'text-slate-500 hover:text-rose-600'
+              }`}
+            >
+              <ArrowDownRight className="w-3.5 h-3.5" />
+              Despesas
+            </button>
+            <button
+              type="button"
+              onClick={() => onTypeFilterChange?.('INCOME')}
+              className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                typeFilter === 'INCOME'
+                  ? 'bg-emerald-50 text-emerald-700 shadow-sm border border-emerald-200/80'
+                  : 'text-slate-500 hover:text-emerald-600'
+              }`}
+            >
+              <ArrowUpRight className="w-3.5 h-3.5" />
+              Receitas
+            </button>
+          </div>
         </div>
 
-        <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
-          <Button
-            size="small"
-            variant="outlined"
-            startIcon={<Filter className="w-3.5 h-3.5" />}
-            className="rounded-xl border-slate-200 text-slate-600 normal-case font-semibold text-xs"
-          >
-            Filtros avançados
-          </Button>
+        <div className="flex items-center gap-3 justify-end">
           <span className="text-xs text-slate-400 font-medium">
             {totalRows} {totalRows === 1 ? 'categoria cadastrada' : 'categorias cadastradas'}
           </span>
@@ -163,20 +224,23 @@ export function CategoryList({
           <Table>
             <TableHead className="bg-slate-50/50">
               <TableRow>
-                <TableCell width={60} className="font-bold text-xs text-slate-500 uppercase">
+                <TableCell width={50} className="font-bold text-xs text-slate-500 uppercase">
                   Ações
                 </TableCell>
                 <TableCell className="font-bold text-xs text-slate-500 uppercase">
                   Nome da categoria
                 </TableCell>
-                <TableCell width={120} className="font-bold text-xs text-slate-500 uppercase text-center">
-                  Cor do gráfico
+                <TableCell width={110} className="font-bold text-xs text-slate-500 uppercase">
+                  Tipo
+                </TableCell>
+                <TableCell width={70} className="font-bold text-xs text-slate-500 uppercase text-center">
+                  Cor
                 </TableCell>
                 <TableCell className="font-bold text-xs text-slate-500 uppercase">
-                  Limite mensal
+                  Limite / Meta
                 </TableCell>
                 <TableCell className="font-bold text-xs text-slate-500 uppercase">
-                  Consumido
+                  Total no mês
                 </TableCell>
                 <TableCell width={140} className="font-bold text-xs text-slate-500 uppercase">
                   Status
@@ -186,47 +250,63 @@ export function CategoryList({
             <TableBody>
               {categories.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-12 text-slate-400 text-sm">
+                  <TableCell colSpan={7} className="text-center py-12 text-slate-400 text-sm">
                     Nenhuma categoria encontrada.
                   </TableCell>
                 </TableRow>
               ) : (
-                categories.map((row) => (
-                  <TableRow key={row.id} hover className="transition-colors">
-                    <TableCell>
-                      <IconButton
-                        size="small"
-                        onClick={(e) => handleOpenMenu(e, row)}
-                        className="text-slate-400 hover:text-slate-700"
-                      >
-                        <MoreVertical className="w-4 h-4" />
-                      </IconButton>
-                    </TableCell>
-                    <TableCell>
-                      <div>
-                        <p className="font-semibold text-slate-800 text-sm leading-tight">{row.name}</p>
-                        {row.description && (
-                          <p className="text-xs text-slate-400 mt-0.5 truncate max-w-sm">{row.description}</p>
+                categories.map((row) => {
+                  const isIncome = row.type === 'INCOME';
+                  return (
+                    <TableRow key={row.id} hover className="transition-colors">
+                      <TableCell>
+                        <IconButton
+                          size="small"
+                          onClick={(e) => handleOpenMenu(e, row)}
+                          className="text-slate-400 hover:text-slate-700"
+                        >
+                          <MoreVertical className="w-4 h-4" />
+                        </IconButton>
+                      </TableCell>
+                      <TableCell>
+                        <div>
+                          <p className="font-semibold text-slate-800 text-sm leading-tight">{row.name}</p>
+                          {row.description && (
+                            <p className="text-xs text-slate-400 mt-0.5 truncate max-w-sm">{row.description}</p>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {isIncome ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/60">
+                            <ArrowUpRight className="w-3 h-3 text-emerald-600" />
+                            Receita
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200/60">
+                            <ArrowDownRight className="w-3 h-3 text-rose-600" />
+                            Despesa
+                          </span>
                         )}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <span
-                        className="w-3.5 h-3.5 rounded-full inline-block shadow-sm"
-                        style={{ backgroundColor: row.color || '#94a3b8' }}
-                      />
-                    </TableCell>
-                    <TableCell className="text-sm font-semibold text-slate-700 font-mono">
-                      {formatCurrency(row.monthly_limit)}
-                    </TableCell>
-                    <TableCell className="text-sm font-bold text-slate-800 font-mono">
-                      {formatCurrency(row.consumed || 0)}
-                    </TableCell>
-                    <TableCell>
-                      {renderStatusBadge(row.monthly_limit, row.consumed || 0)}
-                    </TableCell>
-                  </TableRow>
-                ))
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <span
+                          className="w-3.5 h-3.5 rounded-full inline-block shadow-sm"
+                          style={{ backgroundColor: row.color || '#94a3b8' }}
+                        />
+                      </TableCell>
+                      <TableCell className="text-sm font-semibold text-slate-700 font-mono">
+                        {formatCurrency(row.monthly_limit)}
+                      </TableCell>
+                      <TableCell className={`text-sm font-bold font-mono ${isIncome ? 'text-emerald-600' : 'text-slate-800'}`}>
+                        {isIncome && row.consumed ? '+ ' : ''}{formatCurrency(row.consumed || 0)}
+                      </TableCell>
+                      <TableCell>
+                        {renderStatusBadge(row.type, row.monthly_limit, row.consumed || 0)}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
               )}
             </TableBody>
           </Table>

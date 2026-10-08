@@ -151,7 +151,7 @@ export interface IElectronAPI {
   }) => Promise<{ success: boolean; error?: string }>;
 
   // Categorias (paginado)
-  getCategories: (params?: PaginationParams & { yearMonth?: string }) => Promise<PaginatedResult<Category>>;
+  getCategories: (params?: PaginationParams & { yearMonth?: string; type?: 'ALL' | 'INCOME' | 'EXPENSE' }) => Promise<PaginatedResult<Category>>;
   createCategory: (category: Omit<Category, 'id' | 'created_at'>) => Promise<Category>;
   updateCategory: (id: number, category: Partial<Category>) => Promise<boolean>;
   deleteCategory: (id: number) => Promise<boolean>;

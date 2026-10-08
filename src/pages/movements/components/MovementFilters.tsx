@@ -11,6 +11,7 @@ import {
   Paper,
   InputAdornment,
   IconButton,
+  ListSubheader,
 } from '@mui/material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import dayjs from 'dayjs';
@@ -209,17 +210,46 @@ export function MovementFilters({
             className="rounded-xl text-xs"
           >
             <MenuItem value="">Todas as categorias</MenuItem>
-            {categories.map((cat) => (
-              <MenuItem key={cat.id} value={cat.id} className="text-xs">
-                <span className="flex items-center gap-2">
-                  <span
-                    className="w-2.5 h-2.5 rounded-full inline-block"
-                    style={{ backgroundColor: cat.color || '#64748b' }}
-                  />
-                  {cat.name}
-                </span>
-              </MenuItem>
-            ))}
+            {(filters.type === 'ALL' || !filters.type || filters.type === 'EXPENSE') &&
+              categories.some((c) => c.type === 'EXPENSE') && (
+                <ListSubheader className="text-[11px] font-bold text-rose-700 bg-rose-50/70 py-1 leading-normal">
+                  Despesas
+                </ListSubheader>
+              )}
+            {(filters.type === 'ALL' || !filters.type || filters.type === 'EXPENSE') &&
+              categories
+                .filter((cat) => cat.type === 'EXPENSE')
+                .map((cat) => (
+                  <MenuItem key={cat.id} value={cat.id} className="text-xs">
+                    <span className="flex items-center gap-2">
+                      <span
+                        className="w-2.5 h-2.5 rounded-full inline-block flex-shrink-0"
+                        style={{ backgroundColor: cat.color || '#64748b' }}
+                      />
+                      <span>{cat.name}</span>
+                    </span>
+                  </MenuItem>
+                ))}
+            {(filters.type === 'ALL' || !filters.type || filters.type === 'INCOME') &&
+              categories.some((c) => c.type === 'INCOME') && (
+                <ListSubheader className="text-[11px] font-bold text-emerald-700 bg-emerald-50/70 py-1 leading-normal">
+                  Receitas
+                </ListSubheader>
+              )}
+            {(filters.type === 'ALL' || !filters.type || filters.type === 'INCOME') &&
+              categories
+                .filter((cat) => cat.type === 'INCOME')
+                .map((cat) => (
+                  <MenuItem key={cat.id} value={cat.id} className="text-xs">
+                    <span className="flex items-center gap-2">
+                      <span
+                        className="w-2.5 h-2.5 rounded-full inline-block flex-shrink-0"
+                        style={{ backgroundColor: cat.color || '#64748b' }}
+                      />
+                      <span>{cat.name}</span>
+                    </span>
+                  </MenuItem>
+                ))}
           </Select>
         </FormControl>
 

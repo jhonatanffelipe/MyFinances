@@ -8,6 +8,7 @@ export function useCategories() {
   const [currentPage, setCurrentPage] = useState(0);
   const [perPage, setPerPage] = useState(10);
   const [search, setSearch] = useState('');
+  const [typeFilter, setTypeFilter] = useState<'ALL' | 'INCOME' | 'EXPENSE'>('ALL');
   const [orderField, setOrderField] = useState('name');
   const [orderDirection, setOrderDirection] = useState<'asc' | 'desc'>('asc');
 
@@ -21,6 +22,7 @@ export function useCategories() {
       page = currentPage,
       limit = perPage,
       searchQuery = search,
+      selectedType = typeFilter,
       field = orderField,
       direction = orderDirection
     ) => {
@@ -32,6 +34,7 @@ export function useCategories() {
             page,
             perPage: limit,
             search: searchQuery,
+            type: selectedType,
             orderField: field,
             orderDirection: direction,
           });
@@ -44,26 +47,32 @@ export function useCategories() {
         setLoading(false);
       }
     },
-    [currentPage, perPage, search, orderField, orderDirection]
+    [currentPage, perPage, search, typeFilter, orderField, orderDirection]
   );
 
   useEffect(() => {
-    fetchCategories(currentPage, perPage, search, orderField, orderDirection);
+    fetchCategories(currentPage, perPage, search, typeFilter, orderField, orderDirection);
   }, []);
 
   const handlePagination = useCallback(
     async (newPerPage: number, newPage: number, field: string, direction: 'asc' | 'desc') => {
       setPerPage(newPerPage);
       setCurrentPage(newPage);
-      await fetchCategories(newPage, newPerPage, search, field || orderField, direction || orderDirection);
+      await fetchCategories(newPage, newPerPage, search, typeFilter, field || orderField, direction || orderDirection);
     },
-    [fetchCategories, search, orderField, orderDirection]
+    [fetchCategories, search, typeFilter, orderField, orderDirection]
   );
 
   const handleSearchChange = (val: string) => {
     setSearch(val);
     setCurrentPage(0);
-    fetchCategories(0, perPage, val, orderField, orderDirection);
+    fetchCategories(0, perPage, val, typeFilter, orderField, orderDirection);
+  };
+
+  const handleTypeFilterChange = (newType: 'ALL' | 'INCOME' | 'EXPENSE') => {
+    setTypeFilter(newType);
+    setCurrentPage(0);
+    fetchCategories(0, perPage, search, newType, orderField, orderDirection);
   };
 
   const handleOpenCreate = () => {
@@ -104,7 +113,7 @@ export function useCategories() {
         });
       }
       handleCloseModal();
-      await fetchCategories(currentPage, perPage, search, orderField, orderDirection);
+      await fetchCategories(currentPage, perPage, search, typeFilter, orderField, orderDirection);
     } catch (err: any) {
       setError(err.message || 'Erro ao salvar categoria');
     }
@@ -121,7 +130,7 @@ export function useCategories() {
     try {
       if (window.electronAPI) {
         await window.electronAPI.deleteCategory(id);
-        await fetchCategories(currentPage, perPage, search, orderField, orderDirection);
+        await fetchCategories(currentPage, perPage, search, typeFilter, orderField, orderDirection);
       }
     } catch (err: any) {
       setError(err.message || 'Erro ao excluir categoria');
@@ -134,6 +143,7 @@ export function useCategories() {
     currentPage,
     perPage,
     search,
+    typeFilter,
     orderField,
     orderDirection,
     setCurrentPage,
@@ -142,6 +152,7 @@ export function useCategories() {
     setOrderDirection,
     handlePagination,
     handleSearchChange,
+    handleTypeFilterChange,
     loading,
     error,
     isModalOpen,
@@ -151,6 +162,6 @@ export function useCategories() {
     handleCloseModal,
     handleSubmitCategory,
     handleDeleteCategory,
-    refetch: () => fetchCategories(currentPage, perPage, search, orderField, orderDirection),
+    refetch: () => fetchCategories(currentPage, perPage, search, typeFilter, orderField, orderDirection),
   };
 }

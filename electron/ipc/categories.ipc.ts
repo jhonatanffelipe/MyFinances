@@ -5,33 +5,44 @@ import { resolveYearMonth } from '../services/date.service.js';
 
 export function registerCategoriesIpc() {
   ipcMain.handle(IPC_CHANNELS.CATEGORIES_LIST, async (_event, params: any = {}) => {
-    const { yearMonth, page = 0, perPage = 10, search = '', orderField = 'name', orderDirection = 'asc' } = params;
+    const { yearMonth, page = 0, perPage = 10, search = '', type = 'ALL', orderField = 'name', orderDirection = 'asc' } = params;
     const period = resolveYearMonth(yearMonth);
     const offset = page * perPage;
     const dir = orderDirection === 'desc' ? 'DESC' : 'ASC';
     const allowedOrder = ['name', 'type', 'monthly_limit', 'consumed'].includes(orderField) ? orderField : 'name';
 
     const searchParam = search ? `%${search}%` : '%';
-    const baseParams = [period.start, period.end, searchParam];
+    const filterType = type && type !== 'ALL' ? type : null;
 
-    const total = queryObject(
-      `SELECT COUNT(*) as count FROM categories c WHERE c.name LIKE ?`,
-      [searchParam]
-    )?.count || 0;
+    let countSql = `SELECT COUNT(*) as count FROM categories c WHERE c.name LIKE ?`;
+    const countParams: any[] = [searchParam];
+    if (filterType) {
+      countSql += ` AND c.type = ?`;
+      countParams.push(filterType);
+    }
 
-    const data = queryObjects(
-      `SELECT c.*,
+    const total = queryObject(countSql, countParams)?.count || 0;
+
+    let dataSql = `SELECT c.*,
               COALESCE((
                 SELECT SUM(m.amount) FROM movements m
-                WHERE m.category_id = c.id AND m.type = 'EXPENSE'
+                WHERE m.category_id = c.id AND m.type = c.type
                   AND m.date >= ? AND m.date <= ?
               ), 0) AS consumed
        FROM categories c
-       WHERE c.name LIKE ?
-       ORDER BY ${allowedOrder === 'consumed' ? 'consumed' : `c.${allowedOrder}`} ${dir}
-       LIMIT ? OFFSET ?`,
-      [...baseParams, perPage, offset]
-    );
+       WHERE c.name LIKE ?`;
+    const dataParams: any[] = [period.start, period.end, searchParam];
+
+    if (filterType) {
+      dataSql += ` AND c.type = ?`;
+      dataParams.push(filterType);
+    }
+
+    dataSql += ` ORDER BY ${allowedOrder === 'consumed' ? 'consumed' : `c.${allowedOrder}`} ${dir}
+       LIMIT ? OFFSET ?`;
+    dataParams.push(perPage, offset);
+
+    const data = queryObjects(dataSql, dataParams);
 
     return { data, total, currentPage: page, perPage };
   });

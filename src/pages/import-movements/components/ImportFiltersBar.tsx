@@ -22,6 +22,7 @@ import {
   Paper,
   Menu,
   Tooltip,
+  ListSubheader,
 } from '@mui/material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import dayjs from 'dayjs';
@@ -390,21 +391,50 @@ export function ImportFiltersBar({
             >
               <em>(Sem categoria)</em>
             </MenuItem>
-            {categories.map((cat) => (
-              <MenuItem
-                key={cat.id}
-                onClick={() => handleSelectBulkCategory(cat.id)}
-                className="text-xs"
-              >
-                <div className="flex items-center gap-2">
-                  <span
-                    className="w-2.5 h-2.5 rounded-full flex-shrink-0"
-                    style={{ backgroundColor: cat.color || '#94a3b8' }}
-                  />
-                  <span>{cat.name}</span>
-                </div>
-              </MenuItem>
-            ))}
+            {categories.some((c) => c.type === 'EXPENSE') && (
+              <ListSubheader className="text-[10px] font-bold text-rose-700 bg-rose-50/70 py-0.5 leading-tight">
+                Despesas
+              </ListSubheader>
+            )}
+            {categories
+              .filter((cat) => cat.type === 'EXPENSE')
+              .map((cat) => (
+                <MenuItem
+                  key={cat.id}
+                  onClick={() => handleSelectBulkCategory(cat.id)}
+                  className="text-xs"
+                >
+                  <div className="flex items-center gap-2">
+                    <span
+                      className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                      style={{ backgroundColor: cat.color || '#94a3b8' }}
+                    />
+                    <span>{cat.name}</span>
+                  </div>
+                </MenuItem>
+              ))}
+            {categories.some((c) => c.type === 'INCOME') && (
+              <ListSubheader className="text-[10px] font-bold text-emerald-700 bg-emerald-50/70 py-0.5 leading-tight">
+                Receitas
+              </ListSubheader>
+            )}
+            {categories
+              .filter((cat) => cat.type === 'INCOME')
+              .map((cat) => (
+                <MenuItem
+                  key={cat.id}
+                  onClick={() => handleSelectBulkCategory(cat.id)}
+                  className="text-xs"
+                >
+                  <div className="flex items-center gap-2">
+                    <span
+                      className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                      style={{ backgroundColor: cat.color || '#94a3b8' }}
+                    />
+                    <span>{cat.name}</span>
+                  </div>
+                </MenuItem>
+              ))}
           </Menu>
         </div>
       </div>

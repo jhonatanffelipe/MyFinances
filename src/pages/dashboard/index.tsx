@@ -1,8 +1,8 @@
 import React from 'react';
-import { CircularProgress } from '@mui/material';
+import { CircularProgress, IconButton, Tooltip, Button } from '@mui/material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import dayjs from 'dayjs';
-import { Calendar } from 'lucide-react';
+import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useDashboard } from './hooks/useDashboard';
 import { KpiCards } from './components/KpiCards';
 import { IncomeExpenseChart } from './components/IncomeExpenseChart';
@@ -12,32 +12,78 @@ import { CreditCardPieChart } from './components/CreditCardPieChart';
 import { FixedExpensesChart } from './components/FixedExpensesChart';
 
 export function DashboardPage() {
-  const { selectedYearMonth, setSelectedYearMonth, data, loading, error } = useDashboard();
+  const {
+    selectedYearMonth,
+    setSelectedYearMonth,
+    handlePreviousMonth,
+    handleNextMonth,
+    handleCurrentMonth,
+    data,
+    loading,
+    error,
+  } = useDashboard();
 
   return (
-    <div className="space-y-6">
-      {/* Month Selector */}
-      <div className="flex justify-end items-center -mt-2">
-        <div className="flex items-center gap-3 bg-white px-4 py-2 rounded-2xl border border-slate-100 shadow-sm">
-          <Calendar className="w-5 h-5 text-emerald-600 flex-shrink-0" />
-          <DatePicker
-            views={['year', 'month']}
-            format="MMMM [de] YYYY"
-            value={selectedYearMonth ? dayjs(selectedYearMonth) : null}
-            onChange={(val) => {
-              if (val && val.isValid()) {
-                setSelectedYearMonth(val.format('YYYY-MM'));
-              }
-            }}
-            slotProps={{
-              textField: {
-                size: 'small',
-                variant: 'standard',
-                InputProps: { disableUnderline: true },
-                className: 'text-sm font-bold text-slate-800 capitalize w-48 sm:w-56',
-              },
-            }}
-          />
+    <div className="space-y-6 pt-1">
+      {/* Month Navigation Selector */}
+      <div className="flex justify-end items-center">
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-1 bg-white px-2 py-1.5 rounded-2xl border border-slate-100 shadow-sm">
+            <Tooltip title="Mês anterior">
+              <IconButton
+                size="small"
+                onClick={handlePreviousMonth}
+                className="text-slate-500 hover:text-slate-800 hover:bg-slate-100 p-1.5 rounded-xl transition-colors"
+                aria-label="Mês anterior"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </IconButton>
+            </Tooltip>
+
+            <div className="flex items-center gap-2 px-1 sm:px-2">
+              <Calendar className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+              <DatePicker
+                views={['year', 'month']}
+                format="MMMM [de] YYYY"
+                value={selectedYearMonth ? dayjs(selectedYearMonth) : null}
+                onChange={(val) => {
+                  if (val && val.isValid()) {
+                    setSelectedYearMonth(val.format('YYYY-MM'));
+                  }
+                }}
+                slotProps={{
+                  textField: {
+                    size: 'small',
+                    variant: 'standard',
+                    InputProps: { disableUnderline: true },
+                    className: 'text-sm font-bold text-slate-800 capitalize w-40 sm:w-48 text-center',
+                  },
+                }}
+              />
+            </div>
+
+            <Tooltip title="Próximo mês">
+              <IconButton
+                size="small"
+                onClick={handleNextMonth}
+                className="text-slate-500 hover:text-slate-800 hover:bg-slate-100 p-1.5 rounded-xl transition-colors"
+                aria-label="Próximo mês"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </IconButton>
+            </Tooltip>
+          </div>
+
+          <Tooltip title="Ir para o mês atual">
+            <Button
+              size="small"
+              variant="outlined"
+              onClick={handleCurrentMonth}
+              className="rounded-2xl border-slate-200 text-slate-600 hover:text-emerald-700 hover:border-emerald-300 hover:bg-emerald-50/50 normal-case font-semibold text-xs py-1.5 px-3 h-10 shadow-sm bg-white"
+            >
+              Mês atual
+            </Button>
+          </Tooltip>
         </div>
       </div>
 

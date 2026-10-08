@@ -209,8 +209,15 @@ export function MovementTable({
                           </div>
                         </TableCell>
                         <TableCell>
-                          <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-2 py-0.5 rounded-md bg-purple-50 text-purple-700 border border-purple-200/60">
-                            <CreditCardIcon className="w-3.5 h-3.5 text-purple-600" />
+                          <span
+                            className="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-0.5 rounded-full border"
+                            style={{
+                              backgroundColor: `${row.credit_card_color || '#8b5cf6'}18`,
+                              borderColor: `${row.credit_card_color || '#8b5cf6'}30`,
+                              color: row.credit_card_color || '#8b5cf6',
+                            }}
+                          >
+                            <CreditCardIcon className="w-3.5 h-3.5 shrink-0" />
                             Fatura de Cartão
                           </span>
                         </TableCell>
@@ -282,16 +289,28 @@ export function MovementTable({
                                             </span>
                                           )}
                                         </td>
-                                        <td className="py-2 px-3 text-slate-600">
-                                          <span className="inline-flex items-center gap-1.5">
-                                            {child.category_color && (
+                                        <td className="py-2 px-3">
+                                          {child.category_name ? (
+                                            <span
+                                              className="inline-flex items-center gap-1.5 text-[11px] font-bold px-2 py-0.5 rounded-full border"
+                                              style={{
+                                                backgroundColor: `${child.category_color || '#64748b'}18`,
+                                                borderColor: `${child.category_color || '#64748b'}30`,
+                                                color: child.category_color || '#475569',
+                                              }}
+                                            >
                                               <span
-                                                className="w-2 h-2 rounded-full inline-block"
-                                                style={{ backgroundColor: child.category_color }}
+                                                className="w-1.5 h-1.5 rounded-full shrink-0"
+                                                style={{ backgroundColor: child.category_color || '#64748b' }}
                                               />
-                                            )}
-                                            {child.category_name || 'Sem categoria'}
-                                          </span>
+                                              <span>{child.category_name}</span>
+                                            </span>
+                                          ) : (
+                                            <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200/60">
+                                              <span className="w-1.5 h-1.5 rounded-full bg-slate-400 shrink-0" />
+                                              Sem categoria
+                                            </span>
+                                          )}
                                         </td>
                                         <td className="py-2 px-3">
                                           {child.type === 'INCOME' ? (
@@ -377,8 +396,28 @@ export function MovementTable({
                         )}
                       </div>
                     </TableCell>
-                    <TableCell className="text-sm text-slate-600">
-                      {row.category_name || 'Sem categoria'}
+                    <TableCell>
+                      {row.category_name ? (
+                        <span
+                          className="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-0.5 rounded-full border"
+                          style={{
+                            backgroundColor: `${row.category_color || '#64748b'}18`,
+                            borderColor: `${row.category_color || '#64748b'}30`,
+                            color: row.category_color || '#475569',
+                          }}
+                        >
+                          <span
+                            className="w-1.5 h-1.5 rounded-full shrink-0"
+                            style={{ backgroundColor: row.category_color || '#64748b' }}
+                          />
+                          <span>{row.category_name}</span>
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 bg-slate-100 px-2.5 py-0.5 rounded-full border border-slate-200/60">
+                          <span className="w-1.5 h-1.5 rounded-full bg-slate-400 shrink-0" />
+                          Sem categoria
+                        </span>
+                      )}
                     </TableCell>
                     <TableCell>
                       {row.type === 'INCOME' ? (

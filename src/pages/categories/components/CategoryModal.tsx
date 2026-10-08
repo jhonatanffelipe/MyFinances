@@ -11,7 +11,7 @@ import {
   IconButton,
   InputAdornment,
 } from '@mui/material';
-import { X } from 'lucide-react';
+import { X, TrendingDown, TrendingUp } from 'lucide-react';
 import { Category } from '../../../types/database';
 import { categorySchema, CategoryFormData, COLOR_OPTIONS } from '../constants';
 import { MaskedNumberField } from '../../../components/MaskedField/MaskedNumberField';
@@ -45,6 +45,7 @@ export function CategoryModal({ open, category, onClose, onSubmit }: CategoryMod
   });
 
   const selectedColor = watch('color');
+  const selectedType = watch('type');
 
   useEffect(() => {
     if (category) {
@@ -92,6 +93,39 @@ export function CategoryModal({ open, category, onClose, onSubmit }: CategoryMod
 
       <form onSubmit={handleSubmit(onSubmit as any)}>
         <DialogContent className="space-y-4 px-6 pt-2 pb-4">
+          {/* Tipo de Categoria: Despesa vs Receita */}
+          <div>
+            <label className="text-xs font-semibold text-slate-700 block mb-1.5">
+              Tipo de Categoria
+            </label>
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => setValue('type', 'EXPENSE')}
+                className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl border font-semibold text-xs transition-all cursor-pointer ${
+                  selectedType === 'EXPENSE'
+                    ? 'bg-rose-50 border-rose-300 text-rose-700 shadow-sm ring-1 ring-rose-200'
+                    : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                }`}
+              >
+                <TrendingDown className={`w-4 h-4 ${selectedType === 'EXPENSE' ? 'text-rose-600' : 'text-slate-400'}`} />
+                <span>Despesa</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setValue('type', 'INCOME')}
+                className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl border font-semibold text-xs transition-all cursor-pointer ${
+                  selectedType === 'INCOME'
+                    ? 'bg-emerald-50 border-emerald-300 text-emerald-700 shadow-sm ring-1 ring-emerald-200'
+                    : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                }`}
+              >
+                <TrendingUp className={`w-4 h-4 ${selectedType === 'INCOME' ? 'text-emerald-600' : 'text-slate-400'}`} />
+                <span>Receita</span>
+              </button>
+            </div>
+          </div>
+
           {/* Nome da categoria */}
           <div>
             <label className="text-xs font-semibold text-slate-700 block mb-1.5">
@@ -103,7 +137,7 @@ export function CategoryModal({ open, category, onClose, onSubmit }: CategoryMod
               size="small"
               error={!!errors.name}
               helperText={errors.name?.message}
-              placeholder="Ex: Transporte, Moradia, Alimentação..."
+              placeholder={selectedType === 'INCOME' ? 'Ex: Salário, Freelance, Dividendos...' : 'Ex: Transporte, Moradia, Alimentação...'}
               variant="outlined"
             />
           </div>
@@ -119,7 +153,7 @@ export function CategoryModal({ open, category, onClose, onSubmit }: CategoryMod
               multiline
               rows={2}
               size="small"
-              placeholder="Ex: Combustível, estacionamento, passagem e manutenção do veículo."
+              placeholder={selectedType === 'INCOME' ? 'Ex: Remuneração mensal fixa e variáveis.' : 'Ex: Combustível, estacionamento, passagem e manutenção.'}
               variant="outlined"
             />
           </div>
@@ -154,10 +188,10 @@ export function CategoryModal({ open, category, onClose, onSubmit }: CategoryMod
             {errors.color && <p className="text-xs text-red-500 mt-1">{errors.color.message}</p>}
           </div>
 
-          {/* Limite mensal opcional */}
+          {/* Limite mensal ou Meta mensal */}
           <div>
             <label className="text-xs font-semibold text-slate-700 block mb-1.5">
-              Limite mensal opcional
+              {selectedType === 'INCOME' ? 'Meta mensal esperada (opcional)' : 'Limite mensal de gastos (opcional)'}
             </label>
             <MaskedNumberField
               control={control}
@@ -165,6 +199,11 @@ export function CategoryModal({ open, category, onClose, onSubmit }: CategoryMod
               variant="money"
               placeholder="0,00"
             />
+            <span className="text-[10px] text-slate-400 mt-1 block">
+              {selectedType === 'INCOME'
+                ? 'Valor previsto de entrada para planejar seus ganhos no mês.'
+                : 'Teto orçamentário para alertar quando as despesas se aproximarem do limite.'}
+            </span>
           </div>
         </DialogContent>
 
