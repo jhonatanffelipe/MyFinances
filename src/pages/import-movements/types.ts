@@ -1,4 +1,4 @@
-import { ImportPreviewItem } from '../../interfaces/IElectronBridge';
+import { ImportBankType, ImportPreviewItem } from '../../interfaces/IElectronBridge';
 import { Category, CreditCard } from '../../types/database';
 
 export type StatusFilter = 'ALL' | 'SELECTED' | 'DUPLICATES' | 'UNCATEGORIZED' | 'INVOICE_PAYMENTS';
@@ -11,6 +11,9 @@ export interface UseImportMovementsReturn {
   creditCards: CreditCard[];
   selectedCreditCardId: number | null;
   setSelectedCreditCardId: (id: number | null) => void;
+  bankType: ImportBankType;
+  setBankType: (type: ImportBankType) => void;
+  detectedBank: ImportBankType | null;
   invoiceDate: string;
   setInvoiceDate: (date: string) => void;
   loading: boolean;

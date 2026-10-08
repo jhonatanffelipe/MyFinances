@@ -71,6 +71,8 @@ export interface PaginationParams {
   orderDirection?: 'asc' | 'desc';
 }
 
+export type ImportBankType = 'AUTO' | 'NUBANK' | 'INTER';
+
 export interface ImportPreviewItem {
   id: string;
   date: string;
@@ -81,6 +83,10 @@ export interface ImportPreviewItem {
   categoryId: number | null;
   creditCardId: number | null;
   isInvoicePayment: boolean;
+  notes?: string;
+  bank?: string;
+  categoryHint?: string;
+  transactionTypeHint?: string;
   potentialDuplicate: {
     isDuplicate: boolean;
     reason?: string;
@@ -98,6 +104,7 @@ export interface ImportParseResult {
   totalExpense: number;
   totalIncome: number;
   fileName?: string;
+  detectedBank?: ImportBankType;
 }
 
 export interface ImportExecuteItem {
@@ -163,7 +170,13 @@ export interface IElectronAPI {
 
   // Importação de faturas e extratos
   selectImportFile: () => Promise<{ success: boolean; filePath?: string; content?: string; fileName?: string; error?: string }>;
-  parseImportFile: (params: { filePath?: string; content?: string; fileName?: string; creditCardId?: number | null }) => Promise<ImportParseResult>;
+  parseImportFile: (params: {
+    filePath?: string;
+    content?: string;
+    fileName?: string;
+    creditCardId?: number | null;
+    bankType?: ImportBankType;
+  }) => Promise<ImportParseResult>;
   executeImportMovements: (params: ImportExecuteParams) => Promise<ImportExecuteResult>;
 
   // Despesas fixas (paginado)

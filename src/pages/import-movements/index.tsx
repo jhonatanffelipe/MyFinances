@@ -26,6 +26,9 @@ export function ImportMovementsPage() {
     creditCards,
     selectedCreditCardId,
     setSelectedCreditCardId,
+    bankType,
+    setBankType,
+    detectedBank,
     invoiceDate,
     setInvoiceDate,
     loading,
@@ -104,6 +107,8 @@ export function ImportMovementsPage() {
       {!fileName ? (
         <ImportDropzone
           parsing={parsing}
+          bankType={bankType}
+          onBankTypeChange={setBankType}
           onSelectNative={handleSelectFile}
           onFileDrop={handleDropFile}
         />
@@ -128,9 +133,22 @@ export function ImportMovementsPage() {
                   <FileSpreadsheet className="w-4 h-4" />
                 </div>
                 <div>
-                  <span className="text-xs font-bold text-slate-800 block truncate max-w-xs sm:max-w-md">
-                    {fileName}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-slate-800 block truncate max-w-xs sm:max-w-md">
+                      {fileName}
+                    </span>
+                    {detectedBank && (
+                      <span
+                        className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${
+                          detectedBank === 'INTER'
+                            ? 'bg-orange-50 text-orange-700 border border-orange-200'
+                            : 'bg-purple-50 text-purple-700 border border-purple-200'
+                        }`}
+                      >
+                        {detectedBank === 'INTER' ? 'Banco Inter' : 'Nubank'}
+                      </span>
+                    )}
+                  </div>
                   <span className="text-[11px] text-slate-400 block">
                     {totalItemsCount} lançamentos na planilha
                   </span>

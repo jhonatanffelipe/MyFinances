@@ -148,6 +148,11 @@ export function ImportTable({
                     <span className="block truncate max-w-md" title={item.description}>
                       {item.description}
                     </span>
+                    {item.transactionTypeHint && (
+                      <span className="inline-block text-[10px] text-orange-700 bg-orange-50 border border-orange-200/60 rounded px-1.5 py-0.5 mt-0.5 font-semibold">
+                        {item.transactionTypeHint}
+                      </span>
+                    )}
                   </TableCell>
 
                   {/* Seletor de Categoria */}

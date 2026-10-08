@@ -3,8 +3,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { IPC_CHANNELS } from '../../src/interfaces/IElectronBridge.js';
 import { getDatabase, persistDatabaseToDisk, queryObject, queryObjects } from '../database/index.js';
-import { analyzeImportItems, parseNubankCsv } from '../services/importParser.service.js';
 import { getMainWindow } from '../window.js';
+import { parseAndAnalyzeImport } from '../services/importParser.service.js';
 
 export const MOVEMENT_SELECT = `
   SELECT m.*,
@@ -279,7 +279,7 @@ export function registerMovementsIpc() {
     if (!win) return { success: false, error: 'Janela principal não encontrada' };
 
     const result = await dialog.showOpenDialog(win, {
-      title: 'Selecione o arquivo CSV do Nubank (Extrato ou Fatura)',
+      title: 'Selecione o arquivo CSV da Fatura (Nubank ou Banco Inter)',
       properties: ['openFile'],
       filters: [
         { name: 'Planilha CSV', extensions: ['csv'] },
@@ -312,8 +312,11 @@ export function registerMovementsIpc() {
       throw new Error('Conteúdo do arquivo não fornecido para importação');
     }
 
-    const rawItems = parseNubankCsv(content);
-    const result = analyzeImportItems(rawItems, params.creditCardId || null, fileName);
+    const result = parseAndAnalyzeImport(content, {
+      creditCardId: params.creditCardId || null,
+      fileName,
+      bankType: params.bankType || 'AUTO',
+    });
     return result;
   });
 

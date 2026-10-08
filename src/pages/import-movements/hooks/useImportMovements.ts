@@ -1,14 +1,17 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ImportPreviewItem } from '../../../interfaces/IElectronBridge';
+import { ImportBankType, ImportPreviewItem } from '../../../interfaces/IElectronBridge';
 import { Category, CreditCard } from '../../../types/database';
 import { StatusFilter, UseImportMovementsReturn } from '../types';
 
 export function useImportMovements(): UseImportMovementsReturn {
   const [fileName, setFileName] = useState<string | null>(null);
+  const [rawFileContent, setRawFileContent] = useState<string | null>(null);
   const [items, setItems] = useState<ImportPreviewItem[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [creditCards, setCreditCards] = useState<CreditCard[]>([]);
   const [selectedCreditCardId, setSelectedCreditCardId] = useState<number | null>(null);
+  const [bankType, setBankType] = useState<ImportBankType>('AUTO');
+  const [detectedBank, setDetectedBank] = useState<ImportBankType | null>(null);
   const [invoiceDate, setInvoiceDate] = useState<string>('');
 
   const [loading, setLoading] = useState<boolean>(true);
@@ -91,19 +94,40 @@ export function useImportMovements(): UseImportMovementsReturn {
   };
 
   // Faz o parse do conteúdo do arquivo CSV
-  const parseContent = async (content: string, name: string) => {
+  const parseContent = async (content: string, name: string, bankToUse: ImportBankType = bankType) => {
     try {
       setParsing(true);
       setError(null);
       setSuccessMessage(null);
+      setRawFileContent(content);
 
       const result = await window.electronAPI.parseImportFile({
         content,
         fileName: name,
         creditCardId: selectedCreditCardId,
+        bankType: bankToUse,
       });
 
       setFileName(name);
+      const effectiveBank = result.detectedBank || (bankToUse !== 'AUTO' ? bankToUse : 'NUBANK');
+      setDetectedBank(effectiveBank);
+
+      // Auto-seleciona cartão de crédito caso encontre pelo nome do banco
+      if (effectiveBank === 'INTER') {
+        const interCard = creditCards.find((c) =>
+          c.description.toLowerCase().includes('inter')
+        );
+        if (interCard) {
+          setSelectedCreditCardId(interCard.id);
+        }
+      } else if (effectiveBank === 'NUBANK') {
+        const nubankCard = creditCards.find((c) =>
+          c.description.toLowerCase().includes('nubank')
+        );
+        if (nubankCard) {
+          setSelectedCreditCardId(nubankCard.id);
+        }
+      }
 
       // Detecta se o nome do arquivo contém a data de vencimento (ex: Nubank_2026-10-08.csv)
       const dateMatch = name.match(/(\d{4}-\d{2}-\d{2})/);
@@ -129,13 +153,20 @@ export function useImportMovements(): UseImportMovementsReturn {
     }
   };
 
+  const handleSetBankType = async (newBank: ImportBankType) => {
+    setBankType(newBank);
+    if (rawFileContent && fileName) {
+      await parseContent(rawFileContent, fileName, newBank);
+    }
+  };
+
   // Seleciona arquivo via diálogo nativo
   const handleSelectFile = async () => {
     try {
       setError(null);
       const res = await window.electronAPI.selectImportFile();
       if (res.success && res.content && res.fileName) {
-        await parseContent(res.content, res.fileName);
+        await parseContent(res.content, res.fileName, bankType);
       } else if (!res.success && res.error && res.error !== 'Seleção cancelada pelo usuário') {
         setError(res.error);
       }
@@ -153,7 +184,7 @@ export function useImportMovements(): UseImportMovementsReturn {
         return;
       }
       const text = await file.text();
-      await parseContent(text, file.name);
+      await parseContent(text, file.name, bankType);
     } catch (err: any) {
       console.error('Erro ao ler arquivo solto:', err);
       setError(err?.message || 'Falha ao ler arquivo');
@@ -253,6 +284,8 @@ export function useImportMovements(): UseImportMovementsReturn {
   // Reseta arquivo e volta para o Dropzone
   const handleResetFile = () => {
     setFileName(null);
+    setRawFileContent(null);
+    setDetectedBank(null);
     setItems([]);
     setInvoiceDate('');
     setFilterText('');
@@ -275,7 +308,7 @@ export function useImportMovements(): UseImportMovementsReturn {
 
       const payload = selectedItems.map((item) => {
         const finalDate = invoiceDate ? invoiceDate : item.date;
-        let note = item.isInvoicePayment ? 'Pagamento de fatura importado' : 'Importado via extrato Nubank';
+        let note = item.notes || (item.isInvoicePayment ? 'Pagamento de fatura importado' : 'Importado via fatura');
 
         if (invoiceDate && item.originalDate && item.originalDate !== invoiceDate) {
           const parts = item.originalDate.split('-');
@@ -331,6 +364,9 @@ export function useImportMovements(): UseImportMovementsReturn {
     creditCards,
     selectedCreditCardId,
     setSelectedCreditCardId: handleSetCreditCardId,
+    bankType,
+    setBankType: handleSetBankType,
+    detectedBank,
     invoiceDate,
     setInvoiceDate: handleSetInvoiceDate,
     loading,

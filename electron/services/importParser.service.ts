@@ -1,11 +1,14 @@
 import { getDatabase, queryObjects } from '../database/index.js';
-import { ImportParseResult, ImportPreviewItem } from '../../src/interfaces/IElectronBridge.js';
+import { ImportBankType, ImportParseResult, ImportPreviewItem } from '../../src/interfaces/IElectronBridge.js';
 
-interface RawNubankItem {
+export interface RawImportItem {
   date: string;
   title: string;
   amount: number;
   isInvoicePayment: boolean;
+  categoryHint?: string;
+  transactionTypeHint?: string;
+  bank?: string;
 }
 
 /**
@@ -37,23 +40,28 @@ function parseCsvLine(line: string): string[] {
 }
 
 /**
- * Converte valor em formato monetário brasileiro ("14,90", "- 2.947,68", "1.250,00") para número float.
+ * Converte valor em formato monetário brasileiro ("R$ 40,90", "-R$ 842,13", "14,90", "- 2.947,68", "1.250,00") para float.
  */
-function parseBrazilianNumber(valueStr: string): number {
+export function parseBrazilianNumber(valueStr: string): number {
   if (!valueStr) return 0;
-  // Remove aspas
-  let cleaned = valueStr.replace(/["']/g, '').trim();
+  const str = String(valueStr).trim();
+  const isNegative = str.includes('-');
+  // Remove tudo exceto dígitos, vírgula e ponto
+  const cleaned = str.replace(/[^\d,\.]/g, '');
+  if (!cleaned) return 0;
 
-  // Detecta sinal negativo com ou sem espaço (ex: "- 2.947,68")
-  let isNegative = false;
-  if (cleaned.startsWith('-')) {
-    isNegative = true;
-    cleaned = cleaned.substring(1).trim();
+  let normalized = cleaned;
+  if (cleaned.includes(',') && cleaned.includes('.')) {
+    if (cleaned.lastIndexOf(',') > cleaned.lastIndexOf('.')) {
+      normalized = cleaned.replace(/\./g, '').replace(',', '.');
+    } else {
+      normalized = cleaned.replace(/,/g, '');
+    }
+  } else if (cleaned.includes(',')) {
+    normalized = cleaned.replace(',', '.');
   }
 
-  // Remove pontos de milhar e substitui vírgula decimal por ponto
-  cleaned = cleaned.replace(/\./g, '').replace(',', '.');
-  const num = parseFloat(cleaned);
+  const num = parseFloat(normalized);
   if (isNaN(num)) return 0;
   return isNegative ? -num : num;
 }
@@ -61,7 +69,7 @@ function parseBrazilianNumber(valueStr: string): number {
 /**
  * Normaliza datas para YYYY-MM-DD
  */
-function normalizeDate(dateStr: string): string {
+export function normalizeDate(dateStr: string): string {
   const cleaned = (dateStr || '').replace(/["']/g, '').trim();
   // Se já estiver no padrão YYYY-MM-DD
   if (/^\d{4}-\d{2}-\d{2}$/.test(cleaned)) {
@@ -76,11 +84,28 @@ function normalizeDate(dateStr: string): string {
 }
 
 /**
- * Lê o conteúdo do arquivo CSV do Nubank e extrai as linhas cruas.
+ * Detecta automaticamente o formato bancário da planilha a partir dos cabeçalhos.
  */
-export function parseNubankCsv(csvContent: string): RawNubankItem[] {
+export function detectBankType(csvContent: string): 'NUBANK' | 'INTER' {
+  const firstLines = csvContent.split(/\r?\n/).slice(0, 5).join(' ').toLowerCase();
+  if (
+    firstLines.includes('lançamento') ||
+    firstLines.includes('lancamento') ||
+    firstLines.includes('compra à vista') ||
+    firstLines.includes('compra a vista') ||
+    firstLines.includes('parcela ')
+  ) {
+    return 'INTER';
+  }
+  return 'NUBANK';
+}
+
+/**
+ * Lê o conteúdo do arquivo CSV do Nubank (date,title,amount ou date,category,title,amount).
+ */
+export function parseNubankCsv(csvContent: string): RawImportItem[] {
   const lines = csvContent.split(/\r?\n/);
-  const items: RawNubankItem[] = [];
+  const items: RawImportItem[] = [];
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();
@@ -95,8 +120,9 @@ export function parseNubankCsv(csvContent: string): RawNubankItem[] {
     }
 
     const rawDate = cols[0];
-    const rawTitle = cols[1];
-    const rawAmount = cols[2];
+    const rawTitle = cols.length >= 4 ? cols[2] : cols[1];
+    const rawCategory = cols.length >= 4 ? cols[1] : '';
+    const rawAmount = cols.length >= 4 ? cols[3] : cols[2];
 
     const normalizedDate = normalizeDate(rawDate);
     const parsedAmount = parseBrazilianNumber(rawAmount);
@@ -109,9 +135,76 @@ export function parseNubankCsv(csvContent: string): RawNubankItem[] {
 
     items.push({
       date: normalizedDate,
-      title: rawTitle,
+      title: rawTitle.trim(),
       amount: parsedAmount,
       isInvoicePayment: isPayment,
+      categoryHint: rawCategory,
+      bank: 'Nubank',
+    });
+  }
+
+  return items;
+}
+
+/**
+ * Lê o conteúdo do arquivo CSV do Banco Inter:
+ * Cabeçalho esperado: "Data","Lançamento","Categoria","Tipo","Valor"
+ */
+export function parseInterCsv(csvContent: string): RawImportItem[] {
+  const lines = csvContent.split(/\r?\n/);
+  const items: RawImportItem[] = [];
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (!line) continue;
+
+    const cols = parseCsvLine(line);
+    if (cols.length < 3) continue;
+
+    // Detecta cabeçalho
+    const firstCol = cols[0].toLowerCase().replace(/[^a-z]/g, '');
+    const secondCol = cols[1].toLowerCase().replace(/[^a-z]/g, '');
+    if (
+      firstCol === 'data' &&
+      (secondCol.includes('lancamento') || secondCol.includes('lanamento') || secondCol.includes('descricao'))
+    ) {
+      continue;
+    }
+
+    // Colunas do Banco Inter:
+    // 0: Data ("07/10/2026")
+    // 1: Lançamento ("EBN*SPOTIFY")
+    // 2: Categoria ("PAGAMENTOS")
+    // 3: Tipo ("Compra à vista" ou "Parcela 2/12")
+    // 4: Valor ("R$ 40,90" ou "-R$ 842,13")
+    const rawDate = cols[0];
+    const rawTitle = cols[1];
+    const rawCategory = cols.length >= 5 ? cols[2] : '';
+    const rawTipo = cols.length >= 5 ? cols[3] : '';
+    const rawAmount = cols.length >= 5 ? cols[4] : cols[2];
+
+    const normalizedDate = normalizeDate(rawDate);
+    const parsedAmount = parseBrazilianNumber(rawAmount);
+
+    // Limpa espaçamentos múltiplos internos comuns no extrato do Inter
+    const cleanTitle = rawTitle.replace(/\s+/g, ' ').trim();
+    const titleLower = cleanTitle.toLowerCase();
+
+    const isPayment =
+      parsedAmount < 0 ||
+      titleLower.includes('pagamento on line') ||
+      titleLower.includes('pagamento de fatura') ||
+      titleLower.includes('fatura paga') ||
+      titleLower.includes('pagamento recebido');
+
+    items.push({
+      date: normalizedDate,
+      title: cleanTitle,
+      amount: parsedAmount,
+      isInvoicePayment: isPayment,
+      categoryHint: rawCategory.replace(/["']/g, '').trim(),
+      transactionTypeHint: rawTipo.replace(/["']/g, '').trim(),
+      bank: 'Banco Inter',
     });
   }
 
@@ -271,12 +364,53 @@ const KEYWORD_CATEGORY_RULES: Array<{
   },
 ];
 
+const INTER_CATEGORY_KEYWORDS: Record<string, string[]> = {
+  PAGAMENTOS: ['pagamento', 'fatura', 'outras despesas'],
+  COMPRAS: ['compras', 'outras despesas', 'vestuário', 'vestuario'],
+  ENTRETENIMENTO: ['lazer', 'entretenimento', 'assinaturas'],
+  SERVICOS: ['serviços', 'servicos', 'assinaturas', 'outras despesas'],
+  SERVIÇOS: ['serviços', 'servicos', 'assinaturas', 'outras despesas'],
+  ESPORTES: ['saúde', 'saude', 'esportes', 'lazer'],
+  LIVRARIAS: ['educação', 'educacao', 'estudos', 'livros'],
+  ALIMENTACAO: ['alimentação', 'alimentacao', 'refeição', 'refeicao', 'restaurante'],
+  ALIMENTAÇÃO: ['alimentação', 'alimentacao', 'refeição', 'refeicao', 'restaurante'],
+  TRANSPORTE: ['transporte', 'combustível', 'combustivel', 'veículo', 'veiculo'],
+  SAUDE: ['saúde', 'saude', 'farmácia', 'farmacia', 'médico', 'medico'],
+  SAÚDE: ['saúde', 'saude', 'farmácia', 'farmacia', 'médico', 'medico'],
+  VIAGEM: ['viagem', 'lazer', 'transporte'],
+  FARMACIA: ['saúde', 'saude', 'farmácia', 'farmacia'],
+  FARMÁCIA: ['saúde', 'saude', 'farmácia', 'farmacia'],
+};
+
 /**
- * Sugere a melhor categoria com base no título do lançamento e categorias existentes no banco.
+ * Sugere a melhor categoria com base na categoria informada pelo banco, no título do lançamento e regras.
  */
-function suggestCategory(title: string, categories: any[]): number | null {
+function suggestCategory(
+  title: string,
+  categories: any[],
+  categoryHint?: string
+): number | null {
   const titleLower = title.toLowerCase();
 
+  // 1. Tenta mapear pela categoria original da instituição (ex: Banco Inter "ENTRETENIMENTO", "SERVICOS", etc.)
+  if (categoryHint) {
+    const hintKey = categoryHint.toUpperCase().trim();
+    const targets = INTER_CATEGORY_KEYWORDS[hintKey];
+    if (targets) {
+      for (const target of targets) {
+        const matched = categories.find((c) => c.name.toLowerCase().includes(target));
+        if (matched) return matched.id;
+      }
+    }
+    const directHintMatch = categories.find(
+      (c) =>
+        c.name.toLowerCase().includes(categoryHint.toLowerCase()) ||
+        categoryHint.toLowerCase().includes(c.name.toLowerCase())
+    );
+    if (directHintMatch) return directHintMatch.id;
+  }
+
+  // 2. Regras por palavras-chave no título (Uber, Ifood, Spotify, etc.)
   for (const rule of KEYWORD_CATEGORY_RULES) {
     const hasKeyword = rule.keywords.some((kw) => titleLower.includes(kw));
     if (hasKeyword) {
@@ -289,7 +423,7 @@ function suggestCategory(title: string, categories: any[]): number | null {
     }
   }
 
-  // Tenta correspondência direta com o nome de qualquer categoria cadastrada
+  // 3. Tenta correspondência direta com o nome de qualquer categoria cadastrada
   const directMatch = categories.find((c) =>
     titleLower.includes(c.name.toLowerCase())
   );
@@ -303,9 +437,10 @@ function suggestCategory(title: string, categories: any[]): number | null {
  * possíveis duplicidades (despesas fixas e movimentações já cadastradas) e sugerir categorias.
  */
 export function analyzeImportItems(
-  rawItems: RawNubankItem[],
+  rawItems: RawImportItem[],
   creditCardId: number | null = null,
-  fileName: string = ''
+  fileName: string = '',
+  detectedBank: ImportBankType = 'AUTO'
 ): ImportParseResult {
   const db = getDatabase();
   const categories: any[] = db ? queryObjects('SELECT id, name, type FROM categories') : [];
@@ -335,8 +470,8 @@ export function analyzeImportItems(
       invoicePaymentCount++;
     }
 
-    // Sugestão inteligente de categoria
-    const suggestedCatId = suggestCategory(raw.title, categories);
+    // Sugestão inteligente de categoria considerando dica de banco e palavras-chave
+    const suggestedCatId = suggestCategory(raw.title, categories, raw.categoryHint);
 
     // Detecção de duplicidade
     let isDuplicate = false;
@@ -401,6 +536,16 @@ export function analyzeImportItems(
     // Por padrão: desmarca duplicatas e pagamentos de fatura
     const selected = !isDuplicate && !raw.isInvoicePayment;
 
+    // Define notas explicativas para cada instituição
+    let notes = 'Importado via fatura';
+    if (raw.bank === 'Banco Inter') {
+      notes = raw.transactionTypeHint
+        ? `Banco Inter · ${raw.transactionTypeHint}`
+        : 'Importado via Banco Inter';
+    } else if (raw.bank === 'Nubank') {
+      notes = 'Importado via extrato Nubank';
+    }
+
     return {
       id: `import_row_${index}_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
       date: raw.date,
@@ -411,6 +556,10 @@ export function analyzeImportItems(
       categoryId: suggestedCatId,
       creditCardId: creditCardId,
       isInvoicePayment: raw.isInvoicePayment,
+      notes,
+      bank: raw.bank,
+      categoryHint: raw.categoryHint,
+      transactionTypeHint: raw.transactionTypeHint,
       potentialDuplicate: {
         isDuplicate,
         reason: duplicateReason,
@@ -429,5 +578,32 @@ export function analyzeImportItems(
     totalExpense,
     totalIncome,
     fileName,
+    detectedBank,
   };
+}
+
+/**
+ * Função principal para analisar arquivo CSV a partir do tipo selecionado ou detecção automática.
+ */
+export function parseAndAnalyzeImport(
+  csvContent: string,
+  options: {
+    creditCardId?: number | null;
+    fileName?: string;
+    bankType?: ImportBankType;
+  } = {}
+): ImportParseResult {
+  const bankType = options.bankType || 'AUTO';
+  const effectiveBank: 'NUBANK' | 'INTER' =
+    bankType === 'AUTO' ? detectBankType(csvContent) : bankType;
+
+  const rawItems =
+    effectiveBank === 'INTER' ? parseInterCsv(csvContent) : parseNubankCsv(csvContent);
+
+  return analyzeImportItems(
+    rawItems,
+    options.creditCardId || null,
+    options.fileName || '',
+    effectiveBank
+  );
 }
