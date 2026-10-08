@@ -347,7 +347,7 @@ const KEYWORD_CATEGORY_RULES: Array<{
       'precisa solucoes',
       'contadev',
     ],
-    categoryNames: ['agilios'],
+    categoryNames: ['agilios', 'assinaturas e serviços', 'outras despesas'],
   },
   {
     keywords: [

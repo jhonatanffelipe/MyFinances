@@ -18,7 +18,6 @@ export function seedInitialCategories(
       ['Lazer', 'EXPENSE', '#f59e0b', 'Smile'],
       ['Saúde', 'EXPENSE', '#ec4899', 'Heart'],
       ['Educação', 'EXPENSE', '#8b5cf6', 'BookOpen'],
-      ['Agilios', 'EXPENSE', '#0ea5e9', 'Briefcase'],
       ['Investimentos', 'EXPENSE', '#8b5cf6', 'TrendingUp'],
       ['Empréstimos e Financiamentos', 'EXPENSE', '#ef4444', 'Landmark'],
       ['Compras e Eletrônicos', 'EXPENSE', '#f97316', 'ShoppingBag'],
