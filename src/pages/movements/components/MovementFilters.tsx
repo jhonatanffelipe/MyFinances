@@ -1,6 +1,18 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Plus, RotateCcw, Calendar, FileSpreadsheet, Ban, ChevronLeft, ChevronRight } from 'lucide-react';
+import {
+  Search,
+  Plus,
+  RotateCcw,
+  Calendar,
+  FileSpreadsheet,
+  Ban,
+  ChevronLeft,
+  ChevronRight,
+  Filter,
+  ChevronUp,
+  ChevronDown,
+} from 'lucide-react';
 import {
   TextField,
   MenuItem,
@@ -12,6 +24,7 @@ import {
   InputAdornment,
   IconButton,
   ListSubheader,
+  Collapse,
 } from '@mui/material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import dayjs from 'dayjs';
@@ -33,6 +46,33 @@ export function MovementFilters({
   onOpenCreate,
 }: MovementFiltersProps) {
   const navigate = useNavigate();
+
+  const [isFiltersVisible, setIsFiltersVisible] = React.useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem('myfinances_movements_filters_visible');
+      return saved !== null ? saved === 'true' : true;
+    } catch {
+      return true;
+    }
+  });
+
+  const toggleFiltersVisible = () => {
+    setIsFiltersVisible((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem('myfinances_movements_filters_visible', String(next));
+      } catch {}
+      return next;
+    });
+  };
+
+  const activeFiltersCount = [
+    Boolean(filters.startDate || filters.endDate),
+    Boolean(filters.categoryId),
+    Boolean(filters.type && filters.type !== 'ALL'),
+    Boolean(filters.creditCardId !== undefined),
+  ].filter(Boolean).length;
+
   const getBaseMonthDate = (): Date => {
     if (filters.startDate && /^\d{4}-\d{2}-\d{2}$/.test(filters.startDate)) {
       const parts = filters.startDate.split('-').map(Number);
@@ -130,7 +170,26 @@ export function MovementFilters({
           </div>
         </div>
 
-        <div className="flex items-center gap-2 self-stretch sm:self-auto">
+        <div className="flex items-center gap-2 self-stretch sm:self-auto flex-wrap">
+          <Button
+            variant="outlined"
+            onClick={toggleFiltersVisible}
+            startIcon={<Filter className={`w-4 h-4 ${isFiltersVisible ? 'text-emerald-600' : 'text-slate-500'}`} />}
+            endIcon={isFiltersVisible ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+            className={`font-semibold rounded-xl px-3.5 py-2.5 normal-case whitespace-nowrap text-xs transition-colors ${
+              isFiltersVisible
+                ? 'border-emerald-200 text-emerald-800 bg-emerald-50/60 hover:bg-emerald-100/60'
+                : 'border-slate-200 text-slate-700 hover:bg-slate-50'
+            }`}
+          >
+            {isFiltersVisible ? 'Ocultar filtros' : 'Exibir filtros'}
+            {activeFiltersCount > 0 && (
+              <span className="ml-1.5 px-1.5 py-0.2 rounded-full bg-emerald-600 text-white text-[10px] font-bold">
+                {activeFiltersCount}
+              </span>
+            )}
+          </Button>
+
           <Button
             variant="outlined"
             onClick={() => navigate('/movements/import')}
@@ -153,8 +212,10 @@ export function MovementFilters({
         </div>
       </div>
 
-      {/* Filter Fields Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 pt-1 border-t border-slate-100">
+      <Collapse in={isFiltersVisible}>
+        <div className="space-y-4 pt-1">
+          {/* Filter Fields Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 pt-1 border-t border-slate-100">
         {/* De */}
         <DatePicker
           label="De"
@@ -354,6 +415,8 @@ export function MovementFilters({
           Limpar filtros
         </Button>
       </div>
-    </Paper>
+    </div>
+  </Collapse>
+</Paper>
   );
 }
