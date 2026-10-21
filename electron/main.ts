@@ -9,8 +9,17 @@ if (process.platform === 'win32') {
   app.setAppUserModelId('com.myfinances.desktop');
 }
 
-// Remove a barra de menus padrão do Electron (File, Edit, View, Window, Help)
-Menu.setApplicationMenu(null);
+// Remove a barra de menus padrão do Electron (File, Edit, View, Window, Help).
+// No macOS os atalhos de edição (⌘C, ⌘V, ⌘X, ⌘A, ⌘Z) dependem do menu "Editar"
+// da aplicação; sem ele não é possível colar nos campos. Por isso, no macOS
+// mantemos um menu mínimo com os papéis nativos de app, edição e janela.
+if (process.platform === 'darwin') {
+  Menu.setApplicationMenu(
+    Menu.buildFromTemplate([{ role: 'appMenu' }, { role: 'editMenu' }, { role: 'windowMenu' }])
+  );
+} else {
+  Menu.setApplicationMenu(null);
+}
 
 // Registra todos os canais IPC desacoplados
 registerAllIpcHandlers();

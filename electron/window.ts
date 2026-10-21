@@ -1,4 +1,4 @@
-import { app, BrowserWindow, nativeImage } from 'electron';
+import { app, BrowserWindow, Menu, nativeImage } from 'electron';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -77,6 +77,28 @@ export function createMainWindow(): BrowserWindow {
         mainWindow?.webContents.openDevTools();
       }
     }
+  });
+
+  // Menu de contexto (botão direito) com Recortar / Copiar / Colar nos campos editáveis
+  mainWindow.webContents.on('context-menu', (_event, params) => {
+    const { isEditable, selectionText, editFlags } = params;
+    const hasSelection = Boolean(selectionText && selectionText.trim());
+    if (!isEditable && !hasSelection) return;
+
+    const template: Electron.MenuItemConstructorOptions[] = isEditable
+      ? [
+          { role: 'undo', label: 'Desfazer', enabled: editFlags.canUndo },
+          { role: 'redo', label: 'Refazer', enabled: editFlags.canRedo },
+          { type: 'separator' },
+          { role: 'cut', label: 'Recortar', enabled: editFlags.canCut },
+          { role: 'copy', label: 'Copiar', enabled: editFlags.canCopy },
+          { role: 'paste', label: 'Colar', enabled: editFlags.canPaste },
+          { type: 'separator' },
+          { role: 'selectAll', label: 'Selecionar tudo', enabled: editFlags.canSelectAll },
+        ]
+      : [{ role: 'copy', label: 'Copiar', enabled: editFlags.canCopy }];
+
+    Menu.buildFromTemplate(template).popup({ window: mainWindow ?? undefined });
   });
 
   mainWindow.on('closed', () => {
