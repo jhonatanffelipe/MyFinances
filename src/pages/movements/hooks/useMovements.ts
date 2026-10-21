@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Category, CreditCard, Movement, MovementFilters as FiltersType } from '../../../types/database';
 import { MovementFormData } from '../constants';
 
@@ -47,8 +47,19 @@ export function useMovements() {
     };
   });
 
+  // Sequência de requisições: só a resposta da última busca é aplicada na tela
+  // (evita que um período maior, mais lento, sobrescreva o resultado do mês atual)
+  const requestSeqRef = useRef(0);
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedMovement, setSelectedMovement] = useState<Movement | null>(null);
+
+  // Exclusão em lote de lançamentos de um cartão em um mês
+  const [bulkDeleteState, setBulkDeleteState] = useState<{
+    open: boolean;
+    cardId: number | null;
+    yearMonth: string;
+  }>({ open: false, cardId: null, yearMonth: '' });
 
   const fetchDependencies = useCallback(async () => {
     try {
@@ -73,6 +84,7 @@ export function useMovements() {
       direction = orderDirection,
       currentFilters = filters
     ) => {
+      const requestId = ++requestSeqRef.current;
       try {
         setLoading(true);
         setError(null);
@@ -84,6 +96,7 @@ export function useMovements() {
             orderField: field,
             orderDirection: direction,
           });
+          if (requestId !== requestSeqRef.current) return;
           setMovements(res.data);
           setTotalRows(res.total);
           if (res.summary) {
@@ -91,9 +104,10 @@ export function useMovements() {
           }
         }
       } catch (err: any) {
+        if (requestId !== requestSeqRef.current) return;
         setError(err.message || 'Erro ao carregar movimentações');
       } finally {
-        setLoading(false);
+        if (requestId === requestSeqRef.current) setLoading(false);
       }
     },
     [currentPage, perPage, orderField, orderDirection, filters]
@@ -181,6 +195,36 @@ export function useMovements() {
     }
   };
 
+  /** Abre o modal de exclusão em lote; sem argumentos usa o cartão e o mês do filtro atual. */
+  const handleOpenBulkDelete = (cardId?: number | null, yearMonth?: string) => {
+    const filterCardId =
+      typeof filters.creditCardId === 'number'
+        ? filters.creditCardId
+        : typeof filters.creditCardId === 'string' && /^\d+$/.test(filters.creditCardId)
+          ? Number(filters.creditCardId)
+          : null;
+    const filterMonth =
+      filters.startDate && /^\d{4}-\d{2}/.test(filters.startDate) ? filters.startDate.substring(0, 7) : '';
+    setBulkDeleteState({
+      open: true,
+      cardId: cardId ?? filterCardId,
+      yearMonth: yearMonth || filterMonth,
+    });
+  };
+
+  const handleCloseBulkDelete = () => {
+    setBulkDeleteState((prev) => ({ ...prev, open: false }));
+  };
+
+  const handleConfirmBulkDelete = async (creditCardId: number, yearMonth: string) => {
+    if (!window.electronAPI) return;
+    const res = await window.electronAPI.bulkDeleteCardMovements({ creditCardId, yearMonth });
+    if (!res.success) {
+      throw new Error(res.error || 'Erro ao excluir lançamentos do cartão');
+    }
+    await fetchMovements(currentPage, perPage, orderField, orderDirection, filters);
+  };
+
   const netBalance = summary.totalIncome - summary.totalExpense;
 
   return {
@@ -213,6 +257,10 @@ export function useMovements() {
     handleCloseModal,
     handleSubmitMovement,
     handleDeleteMovement,
+    bulkDeleteState,
+    handleOpenBulkDelete,
+    handleCloseBulkDelete,
+    handleConfirmBulkDelete,
     refetch: () => fetchMovements(currentPage, perPage, orderField, orderDirection, filters),
   };
 }

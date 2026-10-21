@@ -12,6 +12,7 @@ import {
   Filter,
   ChevronUp,
   ChevronDown,
+  Trash2,
 } from 'lucide-react';
 import {
   TextField,
@@ -36,6 +37,7 @@ interface MovementFiltersProps {
   creditCards?: CreditCard[];
   onFilterChange: (newFilters: FiltersType) => void;
   onOpenCreate?: () => void;
+  onOpenBulkDelete?: () => void;
 }
 
 export function MovementFilters({
@@ -44,6 +46,7 @@ export function MovementFilters({
   creditCards = [],
   onFilterChange,
   onOpenCreate,
+  onOpenBulkDelete,
 }: MovementFiltersProps) {
   const navigate = useNavigate();
 
@@ -198,6 +201,17 @@ export function MovementFilters({
           >
             Importar Fatura
           </Button>
+
+          {onOpenBulkDelete && (
+            <Button
+              variant="outlined"
+              onClick={onOpenBulkDelete}
+              startIcon={<Trash2 className="w-4 h-4 text-red-500" />}
+              className="border-slate-200 hover:bg-red-50 text-slate-700 font-semibold rounded-xl px-4 py-2.5 normal-case whitespace-nowrap text-xs"
+            >
+              Excluir por Cartão
+            </Button>
+          )}
 
           {onOpenCreate && (
             <Button

@@ -44,6 +44,8 @@ interface MovementTableProps {
   onEdit: (mov: Movement) => void;
   onDelete: (id: number) => void;
   onFilterCard?: (cardId: number) => void;
+  /** Exclui todos os lançamentos do cartão no mês (YYYY-MM) da fatura. */
+  onBulkDeleteCard?: (cardId: number, yearMonth: string) => void;
 }
 
 export function MovementTable({
@@ -60,18 +62,22 @@ export function MovementTable({
   onEdit,
   onDelete,
   onFilterCard,
+  onBulkDeleteCard,
 }: MovementTableProps) {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [activeMovement, setActiveMovement] = useState<Movement | null>(null);
-  const [expandedCardIds, setExpandedCardIds] = useState<Set<number>>(new Set());
+  // Faturas expandidas, identificadas por cartão + mês (uma fatura por mês para cada cartão)
+  const [expandedGroupKeys, setExpandedGroupKeys] = useState<Set<string>>(new Set());
 
-  const toggleExpandCard = (cardId: number) => {
-    setExpandedCardIds((prev) => {
+  const getGroupKey = (row: Movement) => row.groupKey ?? `${row.credit_card_id || 0}_${row.id}`;
+
+  const toggleExpandCard = (groupKey: string) => {
+    setExpandedGroupKeys((prev) => {
       const next = new Set(prev);
-      if (next.has(cardId)) {
-        next.delete(cardId);
+      if (next.has(groupKey)) {
+        next.delete(groupKey);
       } else {
-        next.add(cardId);
+        next.add(groupKey);
       }
       return next;
     });
@@ -145,12 +151,13 @@ export function MovementTable({
               movements.map((row) => {
                 if (row.isGroupedCard) {
                   const cardId = row.credit_card_id || 0;
-                  const isExpanded = expandedCardIds.has(cardId);
+                  const groupKey = getGroupKey(row);
+                  const isExpanded = expandedGroupKeys.has(groupKey);
                   return (
-                    <React.Fragment key={`grouped_card_${cardId}_${row.id}`}>
+                    <React.Fragment key={`grouped_card_${groupKey}`}>
                       <TableRow
                         hover
-                        onClick={() => toggleExpandCard(cardId)}
+                        onClick={() => toggleExpandCard(groupKey)}
                         className={`transition-colors cursor-pointer ${
                           isExpanded ? 'bg-violet-50/40' : 'bg-slate-50/20'
                         }`}
@@ -162,7 +169,7 @@ export function MovementTable({
                           <div className="flex items-center gap-0.5">
                             <IconButton
                               size="small"
-                              onClick={() => toggleExpandCard(cardId)}
+                              onClick={() => toggleExpandCard(groupKey)}
                               className="text-slate-400 hover:text-slate-700"
                               title={isExpanded ? 'Recolher lançamentos' : 'Expandir lançamentos'}
                             >
@@ -470,15 +477,13 @@ export function MovementTable({
             <MenuItem
               key="toggle-expand"
               onClick={() => {
-                if (activeMovement.credit_card_id) {
-                  toggleExpandCard(activeMovement.credit_card_id);
-                }
+                toggleExpandCard(getGroupKey(activeMovement));
                 handleCloseMenu();
               }}
               className="text-xs font-semibold text-slate-700 flex items-center gap-2 py-2"
             >
               <CreditCardIcon className="w-3.5 h-3.5 text-violet-600" />
-              {activeMovement.credit_card_id && expandedCardIds.has(activeMovement.credit_card_id)
+              {expandedGroupKeys.has(getGroupKey(activeMovement))
                 ? 'Recolher lançamentos'
                 : 'Expandir lançamentos'}
             </MenuItem>,
@@ -493,6 +498,19 @@ export function MovementTable({
               >
                 <Filter className="w-3.5 h-3.5 text-purple-600" />
                 Filtrar apenas este cartão
+              </MenuItem>
+            ) : null,
+            onBulkDeleteCard && activeMovement.credit_card_id ? (
+              <MenuItem
+                key="bulk-delete-card"
+                onClick={() => {
+                  onBulkDeleteCard(activeMovement.credit_card_id!, (activeMovement.date || '').substring(0, 7));
+                  handleCloseMenu();
+                }}
+                className="text-xs font-semibold text-red-600 flex items-center gap-2 py-2"
+              >
+                <Trash2 className="w-3.5 h-3.5 text-red-600" />
+                Excluir todos os lançamentos
               </MenuItem>
             ) : null,
           ]

@@ -50,6 +50,8 @@ export interface Movement {
   notes?: string;
   created_at?: string;
   isGroupedCard?: boolean;
+  /** Identificador único da fatura agrupada: `${cardId}_${YYYY-MM}`. */
+  groupKey?: string;
   cardMovementCount?: number;
   cardMovements?: Movement[];
 }

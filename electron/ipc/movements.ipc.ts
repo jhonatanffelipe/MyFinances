@@ -31,6 +31,22 @@ function formatCardDueDate(yearMonth: string, dueDay: number): string {
   return `${targetYm}-${String(clampedDay).padStart(2, '0')}`;
 }
 
+/** Valida e normaliza os parâmetros da exclusão em lote por cartão/mês. */
+function parseBulkDeleteParams(params: any): { cardId: number; yearMonth: string } {
+  const cardId = Number(params?.creditCardId);
+  const yearMonth = String(params?.yearMonth || '');
+  if (!Number.isInteger(cardId) || cardId <= 0) {
+    throw new Error('Cartão inválido para exclusão em lote');
+  }
+  if (!/^\d{4}-\d{2}$/.test(yearMonth)) {
+    throw new Error('Mês inválido para exclusão em lote (esperado YYYY-MM)');
+  }
+  return { cardId, yearMonth };
+}
+
+// Mesmo critério do agrupamento de faturas na listagem: cartão + mês da data do lançamento
+const BULK_DELETE_WHERE = 'credit_card_id = ? AND substr(date, 1, 7) = ?';
+
 export function registerMovementsIpc() {
   ipcMain.handle(IPC_CHANNELS.MOVEMENTS_LIST, async (_event, filters: any = {}) => {
     const {
@@ -191,8 +207,12 @@ export function registerMovementsIpc() {
         continue;
       }
 
+      // ID sintético único por cartão + mês (evita keys duplicadas no React quando o
+      // período abrange várias faturas do mesmo cartão)
+      const [gy, gm] = group.yearMonth.split('-').map((v) => parseInt(v, 10) || 0);
       groupedCardRows.push({
-        id: -10000 - group.cardId * 100,
+        id: -(group.cardId * 1000000 + gy * 100 + gm),
+        groupKey: `${group.cardId}_${group.yearMonth}`,
         description: `Fatura - ${group.cardName}`,
         amount: finalAmount,
         date: dueDate,
@@ -272,6 +292,54 @@ export function registerMovementsIpc() {
     db.run('DELETE FROM movements WHERE id = ?', [id]);
     persistDatabaseToDisk();
     return true;
+  });
+
+  ipcMain.handle(IPC_CHANNELS.MOVEMENTS_BULK_DELETE_PREVIEW, async (_event, params: any) => {
+    const { cardId, yearMonth } = parseBulkDeleteParams(params);
+    const row = queryObject(
+      `SELECT COUNT(*) AS count,
+              COALESCE(SUM(CASE WHEN type = 'EXPENSE' THEN amount ELSE 0 END), 0) AS totalExpense,
+              COALESCE(SUM(CASE WHEN type = 'INCOME' THEN amount ELSE 0 END), 0) AS totalIncome,
+              COALESCE(SUM(CASE WHEN fixed_expense_id IS NOT NULL THEN 1 ELSE 0 END), 0) AS fixedCount
+       FROM movements
+       WHERE ${BULK_DELETE_WHERE}`,
+      [cardId, yearMonth]
+    );
+    return {
+      count: Number(row?.count || 0),
+      totalExpense: Number(row?.totalExpense || 0),
+      totalIncome: Number(row?.totalIncome || 0),
+      fixedCount: Number(row?.fixedCount || 0),
+    };
+  });
+
+  ipcMain.handle(IPC_CHANNELS.MOVEMENTS_BULK_DELETE, async (_event, params: any) => {
+    const db = getDatabase();
+    if (!db) throw new Error('Banco de dados não inicializado');
+
+    const { cardId, yearMonth } = parseBulkDeleteParams(params);
+    try {
+      const countRow = queryObject(
+        `SELECT COUNT(*) AS count FROM movements WHERE ${BULK_DELETE_WHERE}`,
+        [cardId, yearMonth]
+      );
+      const deletedCount = Number(countRow?.count || 0);
+      if (deletedCount === 0) {
+        return { success: true, deletedCount: 0 };
+      }
+
+      db.run('BEGIN TRANSACTION');
+      db.run(`DELETE FROM movements WHERE ${BULK_DELETE_WHERE}`, [cardId, yearMonth]);
+      db.run('COMMIT');
+      persistDatabaseToDisk();
+      return { success: true, deletedCount };
+    } catch (err: any) {
+      try {
+        db.run('ROLLBACK');
+      } catch (_) {}
+      console.error('[BulkDelete] Erro ao excluir lançamentos do cartão:', err);
+      return { success: false, deletedCount: 0, error: err?.message || 'Falha ao excluir lançamentos' };
+    }
   });
 
   ipcMain.handle(IPC_CHANNELS.MOVEMENTS_IMPORT_SELECT_FILE, async () => {

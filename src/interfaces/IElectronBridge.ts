@@ -38,6 +38,8 @@ export const IPC_CHANNELS = {
   MOVEMENTS_IMPORT_SELECT_FILE: 'movements:import-select-file',
   MOVEMENTS_IMPORT_PARSE: 'movements:import-parse',
   MOVEMENTS_IMPORT_EXECUTE: 'movements:import-execute',
+  MOVEMENTS_BULK_DELETE_PREVIEW: 'movements:bulk-delete-preview',
+  MOVEMENTS_BULK_DELETE: 'movements:bulk-delete',
 
   FIXED_EXPENSES_LIST: 'fixed-expenses:list',
   FIXED_EXPENSES_CREATE: 'fixed-expenses:create',
@@ -127,6 +129,25 @@ export interface ImportExecuteResult {
   error?: string;
 }
 
+/** Parâmetros da exclusão em lote: todos os lançamentos de um cartão em um mês (YYYY-MM). */
+export interface BulkDeleteCardParams {
+  creditCardId: number;
+  yearMonth: string;
+}
+
+export interface BulkDeleteCardPreview {
+  count: number;
+  totalExpense: number;
+  totalIncome: number;
+  fixedCount: number;
+}
+
+export interface BulkDeleteCardResult {
+  success: boolean;
+  deletedCount: number;
+  error?: string;
+}
+
 export interface IElectronAPI {
   getDbConfig: () => Promise<{ dbPath: string | null; dbFile: string | null }>;
   selectDbFolder: () => Promise<{ success: boolean; dbPath?: string; dbFile?: string; error?: string }>;
@@ -167,6 +188,8 @@ export interface IElectronAPI {
   createMovement: (movement: Omit<Movement, 'id' | 'created_at'>) => Promise<Movement>;
   updateMovement: (id: number, movement: Partial<Movement>) => Promise<boolean>;
   deleteMovement: (id: number) => Promise<boolean>;
+  previewBulkDeleteCardMovements: (params: BulkDeleteCardParams) => Promise<BulkDeleteCardPreview>;
+  bulkDeleteCardMovements: (params: BulkDeleteCardParams) => Promise<BulkDeleteCardResult>;
 
   // Importação de faturas e extratos
   selectImportFile: () => Promise<{ success: boolean; filePath?: string; content?: string; fileName?: string; error?: string }>;

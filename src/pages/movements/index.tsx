@@ -4,6 +4,7 @@ import { MovementSummary } from './components/MovementSummary';
 import { MovementFilters } from './components/MovementFilters';
 import { MovementTable } from './components/MovementTable';
 import { MovementModal } from './components/MovementModal';
+import { BulkDeleteCardModal } from './components/BulkDeleteCardModal';
 
 export function MovementsPage() {
   const {
@@ -34,6 +35,10 @@ export function MovementsPage() {
     handleCloseModal,
     handleSubmitMovement,
     handleDeleteMovement,
+    bulkDeleteState,
+    handleOpenBulkDelete,
+    handleCloseBulkDelete,
+    handleConfirmBulkDelete,
   } = useMovements();
 
   return (
@@ -60,6 +65,7 @@ export function MovementsPage() {
         creditCards={creditCards}
         onFilterChange={setFilters}
         onOpenCreate={handleOpenCreateModal}
+        onOpenBulkDelete={creditCards.length > 0 ? () => handleOpenBulkDelete() : undefined}
       />
 
       {/* Movement Table */}
@@ -77,6 +83,7 @@ export function MovementsPage() {
         onEdit={handleOpenEditModal}
         onDelete={handleDeleteMovement}
         onFilterCard={(cardId) => setFilters({ ...filters, creditCardId: cardId })}
+        onBulkDeleteCard={(cardId, yearMonth) => handleOpenBulkDelete(cardId, yearMonth)}
       />
 
       {/* Modal Form */}
@@ -87,6 +94,16 @@ export function MovementsPage() {
         creditCards={creditCards}
         onClose={handleCloseModal}
         onSubmit={handleSubmitMovement}
+      />
+
+      {/* Exclusão em lote por cartão/mês */}
+      <BulkDeleteCardModal
+        open={bulkDeleteState.open}
+        creditCards={creditCards}
+        initialCardId={bulkDeleteState.cardId}
+        initialYearMonth={bulkDeleteState.yearMonth}
+        onClose={handleCloseBulkDelete}
+        onConfirm={handleConfirmBulkDelete}
       />
     </div>
   );

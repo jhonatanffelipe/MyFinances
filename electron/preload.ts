@@ -30,6 +30,9 @@ const electronAPI: IElectronAPI = {
   createMovement: (movement) => ipcRenderer.invoke(IPC_CHANNELS.MOVEMENTS_CREATE, movement),
   updateMovement: (id, movement) => ipcRenderer.invoke(IPC_CHANNELS.MOVEMENTS_UPDATE, id, movement),
   deleteMovement: (id) => ipcRenderer.invoke(IPC_CHANNELS.MOVEMENTS_DELETE, id),
+  previewBulkDeleteCardMovements: (params) =>
+    ipcRenderer.invoke(IPC_CHANNELS.MOVEMENTS_BULK_DELETE_PREVIEW, params),
+  bulkDeleteCardMovements: (params) => ipcRenderer.invoke(IPC_CHANNELS.MOVEMENTS_BULK_DELETE, params),
 
   // Importação de faturas e extratos
   selectImportFile: () => ipcRenderer.invoke(IPC_CHANNELS.MOVEMENTS_IMPORT_SELECT_FILE),
