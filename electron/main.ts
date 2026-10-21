@@ -2,7 +2,10 @@ import { app, BrowserWindow, Menu } from 'electron';
 import { loadConfig } from './config.js';
 import { closeDatabase, initDatabase } from './database/index.js';
 import { registerAllIpcHandlers } from './ipc/index.js';
-import { createMainWindow, getMainWindow } from './window.js';
+import { applyDockIcon, createMainWindow, getMainWindow } from './window.js';
+
+// Nome exibido pelo sistema (menu do app no macOS, diálogos etc.)
+app.setName('MyFinances');
 
 // No Windows, define o UserModelId para que o ícone apareça na barra de tarefas
 if (process.platform === 'win32') {
@@ -25,6 +28,8 @@ if (process.platform === 'darwin') {
 registerAllIpcHandlers();
 
 app.whenReady().then(async () => {
+  applyDockIcon();
+
   const initialConfig = loadConfig();
   const targetDb = initialConfig.dbFilePath || initialConfig.dbFolder;
   if (targetDb) {

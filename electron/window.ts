@@ -9,14 +9,14 @@ const __dirname = path.dirname(__filename);
 let mainWindow: BrowserWindow | null = null;
 
 export function getAppIcon(): string | undefined {
-  const candidates = [
-    path.join(__dirname, '../public/icons/icon.ico'),
-    path.join(__dirname, '../public/icons/icon.png'),
-    path.join(process.cwd(), 'public/icons/icon.ico'),
-    path.join(process.cwd(), 'public/icons/icon.png'),
-    path.join(__dirname, '../dist/icons/icon.ico'),
-    path.join(__dirname, '../dist/icons/icon.png'),
+  // .ico só é suportado no Windows; macOS e Linux usam o .png
+  const exts = process.platform === 'win32' ? ['ico', 'png'] : ['png'];
+  const baseDirs = [
+    path.join(__dirname, '../public/icons'),
+    path.join(process.cwd(), 'public/icons'),
+    path.join(__dirname, '../dist/icons'),
   ];
+  const candidates = baseDirs.flatMap((dir) => exts.map((ext) => path.join(dir, `icon.${ext}`)));
 
   for (const p of candidates) {
     if (fs.existsSync(p)) return p;
@@ -26,6 +26,24 @@ export function getAppIcon(): string | undefined {
 
 export function getMainWindow(): BrowserWindow | null {
   return mainWindow;
+}
+
+/**
+ * No macOS o ícone exibido no Dock e no Cmd+Tab é o do app (em dev, o Electron.app),
+ * e não o da janela. Por isso definimos explicitamente o ícone do Dock.
+ */
+export function applyDockIcon() {
+  if (process.platform !== 'darwin' || !app.dock) return;
+  const iconPath = getAppIcon();
+  if (!iconPath) return;
+  try {
+    const img = nativeImage.createFromPath(iconPath);
+    if (!img.isEmpty()) {
+      app.dock.setIcon(img);
+    }
+  } catch (e) {
+    console.error('Error setting dock icon:', e);
+  }
 }
 
 export function createMainWindow(): BrowserWindow {
