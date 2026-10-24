@@ -32,8 +32,8 @@ export function RegisterUserView({
       setError('Informe seu nome de usuário');
       return;
     }
-    if (password.length < 8) {
-      setError('A senha deve ter no mínimo 8 caracteres');
+    if (password.length < 4) {
+      setError('A senha deve ter no mínimo 4 caracteres');
       return;
     }
     if (password !== confirmPassword) {
@@ -157,7 +157,7 @@ export function RegisterUserView({
 
           {/* Validation Rules */}
           <div className="text-xs space-y-0.5 pt-1 pb-2">
-            <p className="text-emerald-600 font-medium">Mínimo de 8 caracteres</p>
+            <p className="text-emerald-600 font-medium">Mínimo de 4 caracteres</p>
             <p className="text-slate-400">Letras, números e caracteres especiais</p>
           </div>
 

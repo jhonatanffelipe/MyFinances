@@ -118,8 +118,8 @@ export function ProfilePage() {
         setFeedback({ type: 'error', message: 'Informe a senha atual para confirmar a troca de senha.' });
         return;
       }
-      if (!newPassword || newPassword.length < 8) {
-        setFeedback({ type: 'error', message: 'A nova senha deve conter no mínimo 8 caracteres.' });
+      if (!newPassword || newPassword.length < 4) {
+        setFeedback({ type: 'error', message: 'A nova senha deve conter no mínimo 4 caracteres.' });
         return;
       }
     }
@@ -300,7 +300,7 @@ export function ProfilePage() {
                     type="password"
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
-                    placeholder="Mínimo 8 caracteres"
+                    placeholder="Mínimo 4 caracteres"
                     className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-mono tracking-wider"
                   />
                   <KeyRound className="w-4 h-4 text-slate-400 absolute right-3.5 top-3 pointer-events-none" />

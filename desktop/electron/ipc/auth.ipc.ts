@@ -33,7 +33,7 @@ export function registerAuthIpc() {
     if (!db) return { success: false, error: 'Banco de dados não inicializado' };
     const trimmed = (name || '').trim();
     if (trimmed.length < 2) return { success: false, error: 'Informe um nome de usuário válido' };
-    if (!password || password.length < 8) return { success: false, error: 'A senha deve ter no mínimo 8 caracteres' };
+    if (!password || password.length < 4) return { success: false, error: 'A senha deve ter no mínimo 4 caracteres' };
 
     const existing = queryObject('SELECT id FROM users WHERE name = ?', [trimmed]);
     if (existing) return { success: false, error: 'Já existe um usuário com esse nome neste banco' };
@@ -130,8 +130,8 @@ export function registerAuthIpc() {
         return { success: false, error: 'A senha atual informada está incorreta' };
       }
 
-      if (!data.newPassword || data.newPassword.length < 8) {
-        return { success: false, error: 'A nova senha deve ter no mínimo 8 caracteres' };
+      if (!data.newPassword || data.newPassword.length < 4) {
+        return { success: false, error: 'A nova senha deve ter no mínimo 4 caracteres' };
       }
 
       db.run('UPDATE users SET password_hash = ? WHERE id = ?', [hashPassword(data.newPassword), data.id]);
