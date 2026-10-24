@@ -41,3 +41,8 @@ db_myfinances.sqlite
 # Sistema operacional
 .DS_Store
 Thumbs.db
+
+# Mobile (Expo)
+.expo/
+mobile/android/
+mobile/ios/
