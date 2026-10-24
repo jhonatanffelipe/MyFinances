@@ -13,7 +13,8 @@ export interface DriveItem {
   cTag?: string;
   lastModifiedDateTime?: string;
   folder?: { childCount: number };
-  file?: { mimeType?: string };
+  /** sha1Hash existe no OneDrive pessoal; serve para conferir o download. */
+  file?: { mimeType?: string; hashes?: { sha1Hash?: string; quickXorHash?: string } };
   parentReference?: { id?: string; driveId?: string; path?: string };
 }
 
@@ -30,11 +31,15 @@ const ITEM_FIELDS = 'id,name,size,eTag,cTag,lastModifiedDateTime,folder,file,par
 
 async function request(path: string, init: { method?: string; headers?: Record<string, string>; body?: any } = {}) {
   const token = await getAccessToken();
+  const method = init.method || 'GET';
+  // O fetch do Android (OkHttp) tem cache em disco: sem isso, o download do /content
+  // (redirecionado para a URL do OneDrive) pode devolver uma versão antiga do arquivo.
+  const noCache: Record<string, string> = method === 'GET' ? { 'Cache-Control': 'no-cache', Pragma: 'no-cache' } : {};
   let res;
   try {
     res = await fetch(`${GRAPH}${path}`, {
-      method: init.method || 'GET',
-      headers: { Authorization: `Bearer ${token}`, ...(init.headers || {}) },
+      method,
+      headers: { Authorization: `Bearer ${token}`, ...noCache, ...(init.headers || {}) },
       body: init.body,
     });
   } catch (err: any) {

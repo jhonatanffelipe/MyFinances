@@ -1,6 +1,7 @@
 import { AppState, AppStateStatus } from 'react-native';
+import * as Crypto from 'expo-crypto';
 import * as SQLite from 'expo-sqlite';
-import { Directory, File, Paths } from 'expo-file-system';
+import { File, Paths } from 'expo-file-system';
 import { createExpoAdapter } from '../data/expoAdapter';
 import { onDataChanged, setDatabase } from '../data/db';
 import { createTablesAndRunMigrations } from '../data/schema';
@@ -37,6 +38,8 @@ interface PersistedState {
   pendingUpload: boolean;
   lastSyncAt: string | null;
   accountName: string | null;
+  /** Já existe cópia local do banco baixada do OneDrive. */
+  localCopy: boolean;
 }
 
 export type SyncStatus = 'idle' | 'syncing' | 'pending' | 'offline' | 'error';
@@ -55,18 +58,10 @@ export type SyncEvent =
   | { type: 'conflict'; conflictCopyName: string | null };
 
 const EMPTY: PersistedState = {
-  remote: null, eTag: null, cTag: null, pendingUpload: false, lastSyncAt: null, accountName: null,
+  remote: null, eTag: null, cTag: null, pendingUpload: false, lastSyncAt: null, accountName: null, localCopy: false,
 };
 
 const stateFile = new File(Paths.document, 'myfinances-sync.json');
-/**
- * Pasta própria em Paths.document (e não SQLite.defaultDatabaseDirectory): no Expo Go o
- * diretório padrão do SQLite fica fora da área em que o expo-file-system pode gravar.
- */
-const dbDir = new Directory(Paths.document, 'SQLite');
-const dbFile = new File(dbDir, LOCAL_DB_NAME);
-/** Mesmo diretório como caminho de sistema de arquivos, como o expo-sqlite espera. */
-const dbDirPath = decodeURIComponent(dbDir.uri.replace(/^file:\/\//, ''));
 
 let state: SyncState = { ...EMPTY, signedIn: false, dbReady: false, status: 'idle', error: null, otherDevice: null };
 let sqlite: SQLite.SQLiteDatabase | null = null;
@@ -97,8 +92,8 @@ function setState(patch: Partial<SyncState>) {
 
 async function persist(patch: Partial<PersistedState>) {
   setState(patch);
-  const { remote, eTag, cTag, pendingUpload, lastSyncAt, accountName } = state;
-  await stateFile.write(JSON.stringify({ remote, eTag, cTag, pendingUpload, lastSyncAt, accountName }));
+  const { remote, eTag, cTag, pendingUpload, lastSyncAt, accountName, localCopy } = state;
+  await stateFile.write(JSON.stringify({ remote, eTag, cTag, pendingUpload, lastSyncAt, accountName, localCopy }));
 }
 
 async function loadPersisted(): Promise<PersistedState> {
@@ -156,42 +151,61 @@ async function closeLocal() {
   setState({ dbReady: false });
 }
 
-/** Abre a cópia local, aplica migrações e retorna se o arquivo foi alterado por elas. */
+async function sha(bytes: Uint8Array, algorithm = Crypto.CryptoDigestAlgorithm.SHA256) {
+  const digest = new Uint8Array(await Crypto.digest(algorithm, bytes as Uint8Array<ArrayBuffer>));
+  return Array.from(digest, (b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+/*
+ * A cópia local é manipulada só pelo expo-sqlite (pelo nome, no diretório padrão dele):
+ * entra por deserialize + backup e sai por serializeAsync. Antes, o expo-file-system
+ * gravava o download num caminho e o SQLite abria outro arquivo no Expo Go.
+ */
+
+/** Abre a cópia local, aplica migrações e retorna se o banco foi alterado por elas. */
 async function openLocal(): Promise<boolean> {
   await closeLocal();
-  const before = dbFile.exists ? await dbFile.digest('SHA-256') : null;
-  sqlite = await SQLite.openDatabaseAsync(LOCAL_DB_NAME, undefined, dbDirPath);
+  sqlite = await SQLite.openDatabaseAsync(LOCAL_DB_NAME);
   // Arquivo único (sem WAL), para poder ser enviado inteiro ao OneDrive
   await sqlite.execAsync('PRAGMA journal_mode = DELETE;');
+  const before = await sha(await sqlite.serializeAsync());
   const adapter = createExpoAdapter(sqlite);
   await createTablesAndRunMigrations(adapter);
   await seedInitialCategories(adapter);
   setDatabase(adapter);
   setState({ dbReady: true });
-  const after = await dbFile.digest('SHA-256');
-  return before !== after;
+  return before !== (await sha(await sqlite.serializeAsync()));
 }
 
 /** Substitui a cópia local pelos bytes baixados do OneDrive. */
 async function replaceLocal(bytes: Uint8Array) {
   await closeLocal();
-  if (!dbDir.exists) dbDir.create({ intermediates: true });
-  const tmp = new File(dbDir, `${LOCAL_DB_NAME}.download`);
-  if (tmp.exists) tmp.delete();
-  await tmp.write(bytes);
-  for (const suffix of ['-journal', '-wal', '-shm']) {
-    const extra = new File(dbDir, `${LOCAL_DB_NAME}${suffix}`);
-    if (extra.exists) extra.delete();
+  const downloaded = await SQLite.deserializeDatabaseAsync(bytes);
+  const local = await SQLite.openDatabaseAsync(LOCAL_DB_NAME);
+  try {
+    await SQLite.backupDatabaseAsync({ sourceDatabase: downloaded, destDatabase: local });
+  } finally {
+    await downloaded.closeAsync().catch(() => {});
+    await local.closeAsync().catch(() => {});
   }
-  await tmp.move(dbFile, { overwrite: true });
+}
+
+/** Confere o download com o SHA-1 informado pelo OneDrive (quando disponível). */
+async function assertDownloadMatches(meta: DriveItem, bytes: Uint8Array) {
+  const expected = meta.file?.hashes?.sha1Hash;
+  if (!expected) return;
+  if ((await sha(bytes, Crypto.CryptoDigestAlgorithm.SHA1)) !== expected.toLowerCase()) {
+    throw new Error('O arquivo baixado não corresponde à versão atual do OneDrive. Tente sincronizar novamente.');
+  }
 }
 
 async function downloadAndOpen(remote: RemoteFileRef) {
   const meta = await getItem(remote.itemId);
   const bytes = await downloadItem(remote.itemId);
+  await assertDownloadMatches(meta, bytes);
   await replaceLocal(bytes);
   const migrated = await openLocal();
-  await persist({ eTag: meta.eTag || null, cTag: meta.cTag || null, pendingUpload: migrated, lastSyncAt: new Date().toISOString() });
+  await persist({ eTag: meta.eTag || null, cTag: meta.cTag || null, pendingUpload: migrated, lastSyncAt: new Date().toISOString(), localCopy: true });
   if (migrated) schedulePush();
 }
 
@@ -207,7 +221,7 @@ async function pushNow() {
   if (!remote || !state.pendingUpload || !sqlite) return;
   setState({ status: 'syncing', error: null });
 
-  const bytes = await dbFile.bytes();
+  const bytes = await sqlite.serializeAsync();
   let result = state.eTag ? await uploadItem(remote.itemId, bytes, state.eTag) : null;
 
   if (!result) {
@@ -332,7 +346,7 @@ export async function startSync() {
   });
   AppState.addEventListener('change', onAppStateChange);
 
-  if (state.remote && dbFile.exists) {
+  if (state.remote && state.localCopy) {
     try {
       const migrated = await openLocal();
       if (migrated) await persist({ pendingUpload: true });
@@ -388,7 +402,7 @@ export async function disconnect() {
     stopForegroundTimers();
     if (state.remote) await releasePresence(state.remote.parentId, state.remote.name).catch(() => {});
     await closeLocal();
-    if (dbFile.exists) dbFile.delete();
+    await SQLite.deleteDatabaseAsync(LOCAL_DB_NAME).catch(() => {});
     await msSignOut();
     await persist({ ...EMPTY });
     setState({ signedIn: false, status: 'idle', error: null, otherDevice: null });
@@ -396,7 +410,7 @@ export async function disconnect() {
 }
 
 export function hasLocalDatabase() {
-  return dbFile.exists;
+  return state.localCopy;
 }
 
 export { GraphError };
