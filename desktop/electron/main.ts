@@ -1,6 +1,9 @@
 import { app, BrowserWindow, Menu } from 'electron';
 import { loadConfig } from './config.js';
-import { closeDatabase, initDatabase } from './database/index.js';
+import { checkForExternalChanges, closeDatabase, initDatabase } from './database/index.js';
+import { checkDbLockNow } from './database/lock.js';
+import { onDbSyncEvent } from './database/syncEvents.js';
+import { IPC_CHANNELS } from '../src/interfaces/IElectronBridge.js';
 import { registerAllIpcHandlers } from './ipc/index.js';
 import { applyDockIcon, createMainWindow, getMainWindow } from './window.js';
 
@@ -27,6 +30,20 @@ if (process.platform === 'darwin') {
 // Registra todos os canais IPC desacoplados
 registerAllIpcHandlers();
 
+// Repassa à interface os eventos de sincronização do banco (recarga, conflito, presença)
+onDbSyncEvent((event) => {
+  const win = getMainWindow();
+  if (win && !win.isDestroyed()) {
+    win.webContents.send(IPC_CHANNELS.DB_SYNC_EVENT, event);
+  }
+});
+
+// Ao voltar para o app, confere se o OneDrive trouxe uma versão nova do banco
+app.on('browser-window-focus', () => {
+  checkDbLockNow();
+  checkForExternalChanges();
+});
+
 app.whenReady().then(async () => {
   applyDockIcon();
 
@@ -46,8 +63,14 @@ app.whenReady().then(async () => {
 });
 
 app.on('window-all-closed', () => {
-  closeDatabase();
+  // No macOS o app continua ativo sem janelas; o banco só é fechado ao sair
   if (process.platform !== 'darwin') {
+    closeDatabase();
     app.quit();
   }
+});
+
+// Grava pendências e remove o arquivo de presença ao encerrar
+app.on('will-quit', () => {
+  closeDatabase();
 });

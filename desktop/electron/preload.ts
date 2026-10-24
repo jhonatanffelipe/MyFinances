@@ -1,10 +1,21 @@
 import { contextBridge, ipcRenderer } from 'electron';
-import { IElectronAPI, IPC_CHANNELS } from '../src/interfaces/IElectronBridge';
+import { DbSyncEvent, IElectronAPI, IPC_CHANNELS } from '../src/interfaces/IElectronBridge';
 
 const electronAPI: IElectronAPI = {
   getDbConfig: () => ipcRenderer.invoke(IPC_CHANNELS.DB_GET_CONFIG),
   selectDbFolder: () => ipcRenderer.invoke(IPC_CHANNELS.DB_SELECT_FOLDER),
   selectDbFile: () => ipcRenderer.invoke(IPC_CHANNELS.DB_SELECT_FILE),
+
+  // Sincronização do arquivo do banco
+  getDbSyncStatus: () => ipcRenderer.invoke(IPC_CHANNELS.DB_GET_SYNC_STATUS),
+  checkDbExternalChanges: () => ipcRenderer.invoke(IPC_CHANNELS.DB_CHECK_EXTERNAL),
+  onDbSyncEvent: (callback) => {
+    const handler = (_event: Electron.IpcRendererEvent, payload: DbSyncEvent) => callback(payload);
+    ipcRenderer.on(IPC_CHANNELS.DB_SYNC_EVENT, handler);
+    return () => {
+      ipcRenderer.removeListener(IPC_CHANNELS.DB_SYNC_EVENT, handler);
+    };
+  },
 
   // Autenticação e perfil
   getAuthStatus: () => ipcRenderer.invoke(IPC_CHANNELS.AUTH_STATUS),

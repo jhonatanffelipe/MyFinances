@@ -11,9 +11,11 @@ import {
   LogOut,
   Database,
   User,
+  MonitorSmartphone,
 } from 'lucide-react';
 import { Menu, MenuItem, ListItemIcon, ListItemText, CircularProgress } from '@mui/material';
 import { useAuth } from '../../contexts/AuthContext';
+import { useDbSync } from '../../contexts/DbSyncContext';
 import { AuthPage } from '../../pages/auth';
 
 interface NavItem {
@@ -75,6 +77,7 @@ export function AppLayout() {
   const navigate = useNavigate();
   const { dbPath, dbFile, user, loading, logout } = useAuth();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const { dataVersion, otherDevice } = useDbSync();
 
   // Enquanto faz a checagem inicial de status E houver chance de usuário já logado
   // (sessão em memória), exibe um spinner rápido. Caso contrário, exibe o fluxo de auth imediatamente.
@@ -313,7 +316,18 @@ export function AppLayout() {
 
         {/* Scrollable Page Body */}
         <main className="flex-1 overflow-y-auto px-8 pb-8 pt-2">
-          <Outlet />
+          {otherDevice && (
+            <div className="mb-4 flex items-start gap-2.5 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-800">
+              <MonitorSmartphone className="w-4 h-4 shrink-0 mt-0.5 text-amber-600" />
+              <span>
+                Este banco também está aberto em <strong>{otherDevice.deviceName}</strong>
+                {otherDevice.app === 'mobile' ? ' (celular)' : ''}. Evite editar nos dois dispositivos ao
+                mesmo tempo para não gerar conflito.
+              </span>
+            </div>
+          )}
+          {/* A key força recarregar a página quando o banco é atualizado por outro dispositivo */}
+          <Outlet key={dataVersion} />
         </main>
       </div>
     </div>

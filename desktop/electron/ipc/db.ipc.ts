@@ -2,10 +2,20 @@ import { BrowserWindow, dialog, ipcMain } from 'electron';
 import path from 'node:path';
 import { IPC_CHANNELS } from '../../src/interfaces/IElectronBridge.js';
 import { loadConfig, saveConfig } from '../config.js';
-import { getDatabase, getCurrentDbFilePath, initDatabase } from '../database/index.js';
+import { checkForExternalChanges, getDatabase, getCurrentDbFilePath, initDatabase } from '../database/index.js';
+import { checkDbLockNow, getOtherDevicePresence } from '../database/lock.js';
 import { getMainWindow } from '../window.js';
 
 export function registerDbIpc() {
+  ipcMain.handle(IPC_CHANNELS.DB_GET_SYNC_STATUS, async () => {
+    return { otherDevice: getOtherDevicePresence() };
+  });
+
+  ipcMain.handle(IPC_CHANNELS.DB_CHECK_EXTERNAL, async () => {
+    checkDbLockNow();
+    return checkForExternalChanges();
+  });
+
   ipcMain.handle(IPC_CHANNELS.DB_GET_CONFIG, async () => {
     const config = loadConfig();
     const currentDbFilePath = getCurrentDbFilePath();

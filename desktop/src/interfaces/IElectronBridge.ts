@@ -14,6 +14,9 @@ export const IPC_CHANNELS = {
   DB_GET_CONFIG: 'db:get-config',
   DB_SELECT_FOLDER: 'db:select-folder',
   DB_SELECT_FILE: 'db:select-file',
+  DB_SYNC_EVENT: 'db:sync-event',
+  DB_GET_SYNC_STATUS: 'db:get-sync-status',
+  DB_CHECK_EXTERNAL: 'db:check-external',
 
   AUTH_STATUS: 'auth:status',
   AUTH_REGISTER: 'auth:register',
@@ -129,6 +132,28 @@ export interface ImportExecuteResult {
   error?: string;
 }
 
+/** Dispositivo que está com o banco aberto (conteúdo do arquivo <banco>.lock). */
+export interface DbDevicePresence {
+  deviceId: string;
+  deviceName: string;
+  platform: string;
+  app: 'desktop' | 'mobile';
+  updatedAt: string; // ISO
+}
+
+/** Eventos enviados pelo processo principal sobre a sincronização do arquivo do banco. */
+export type DbSyncEvent =
+  /** O arquivo foi alterado por outro dispositivo e o banco foi recarregado. */
+  | { type: 'reloaded' }
+  /** Uma gravação local foi cancelada porque o arquivo mudou por fora. */
+  | { type: 'conflict'; conflictCopyPath: string | null; reloaded: boolean }
+  /** Outro dispositivo abriu/fechou o mesmo banco (null = nenhum outro ativo). */
+  | { type: 'presence'; otherDevice: DbDevicePresence | null };
+
+export interface DbSyncStatus {
+  otherDevice: DbDevicePresence | null;
+}
+
 /** Parâmetros da exclusão em lote: todos os lançamentos de um cartão em um mês (YYYY-MM). */
 export interface BulkDeleteCardParams {
   creditCardId: number;
@@ -152,6 +177,12 @@ export interface IElectronAPI {
   getDbConfig: () => Promise<{ dbPath: string | null; dbFile: string | null }>;
   selectDbFolder: () => Promise<{ success: boolean; dbPath?: string; dbFile?: string; error?: string }>;
   selectDbFile: () => Promise<{ success: boolean; dbPath?: string; dbFile?: string; error?: string }>;
+
+  // Sincronização do arquivo do banco (OneDrive / outros dispositivos)
+  getDbSyncStatus: () => Promise<DbSyncStatus>;
+  checkDbExternalChanges: () => Promise<boolean>;
+  /** Assina eventos de sincronização; retorna a função para cancelar a assinatura. */
+  onDbSyncEvent: (callback: (event: DbSyncEvent) => void) => () => void;
 
   // Autenticação local e perfil
   getAuthStatus: () => Promise<{ hasUser: boolean; userName: string | null; user?: AppUser | null }>;
