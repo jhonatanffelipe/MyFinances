@@ -4,19 +4,26 @@ import { router } from 'expo-router';
 import { Button, Checkbox, HelperText, Icon, Text, TextInput } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { hasUsers, listUserNames, login, registerUser } from '../data/repositories/auth';
+import { confirm } from '../components/confirm';
 import { useSession } from '../contexts/SessionContext';
+import { useSync } from '../contexts/SyncContext';
+import { syncNow } from '../sync/syncManager';
+import { relativeTime } from '../utils/format';
 import { COLORS } from '../theme/tokens';
 
 /** Login com os mesmos usuários do desktop (ou cadastro, se o banco ainda não tiver). */
 export default function Login() {
   const { signIn } = useSession();
+  const { sync, dataVersion } = useSync();
   const [mode, setMode] = useState<'login' | 'register' | null>(null);
   const [name, setName] = useState('');
   const [password, setPassword] = useState('');
   const [remember, setRemember] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [syncing, setSyncing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Recarrega os usuários quando o banco é substituído pela versão do OneDrive
   useEffect(() => {
     (async () => {
       const exists = await hasUsers();
@@ -26,7 +33,35 @@ export default function Login() {
         if (names.length === 1) setName(names[0]);
       }
     })().catch((err) => setError(err?.message));
-  }, []);
+  }, [dataVersion]);
+
+  /** Força a conferência com o OneDrive (ex.: senha alterada no computador). */
+  const forceSync = async () => {
+    setSyncing(true);
+    setError(null);
+    try {
+      await syncNow();
+    } catch (err: any) {
+      setError(err?.message || 'Falha ao sincronizar com o OneDrive');
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  /** Volta à escolha do arquivo; ao escolher, a cópia local é substituída pela do OneDrive. */
+  const pickAgain = async () => {
+    if (
+      sync.pendingUpload &&
+      !(await confirm(
+        'Selecionar o arquivo novamente',
+        'Há alterações deste celular que ainda não foram enviadas ao OneDrive. Ao escolher o arquivo, elas serão descartadas.',
+        'Continuar'
+      ))
+    ) {
+      return;
+    }
+    router.push('/onboarding/pick');
+  };
 
   const submit = async () => {
     setBusy(true);
@@ -87,6 +122,21 @@ export default function Login() {
               Verificando a senha (pode levar alguns segundos no celular)…
             </Text>
           ) : null}
+          {sync.remote ? (
+            <View style={styles.sync}>
+              <Button mode="text" icon="sync" onPress={forceSync} loading={syncing} disabled={syncing || busy}>
+                Sincronizar com o OneDrive
+              </Button>
+              <Text variant="bodySmall" style={styles.hint}>
+                Última sincronização {relativeTime(sync.lastSyncAt)}
+              </Text>
+            </View>
+          ) : null}
+          {sync.signedIn ? (
+            <Button mode="text" icon="folder-search-outline" onPress={pickAgain} disabled={syncing || busy}>
+              Selecionar o arquivo novamente
+            </Button>
+          ) : null}
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -102,4 +152,5 @@ const styles = StyleSheet.create({
   subtitle: { textAlign: 'center', color: COLORS.inkMuted },
   form: { gap: 12 },
   hint: { textAlign: 'center', color: COLORS.inkFaint },
+  sync: { alignItems: 'center', marginTop: 4 },
 });
