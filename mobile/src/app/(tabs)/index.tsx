@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
-import { Checkbox, Icon, Text } from 'react-native-paper';
+import { Icon, Text } from 'react-native-paper';
 import { Screen } from '../../components/Screen';
 import { Card } from '../../components/Card';
 import { MonthSelector } from '../../components/MonthSelector';
@@ -9,7 +9,6 @@ import { EmptyState } from '../../components/EmptyState';
 import { useData } from '../../hooks/useData';
 import { defaultYearMonth } from '../../data/date';
 import { getDashboardData } from '../../data/repositories/dashboard';
-import { setFixedEntryPaid } from '../../data/repositories/fixedEntries';
 import { formatCurrency } from '../../utils/format';
 import { COLORS } from '../../theme/tokens';
 
@@ -109,14 +108,6 @@ export default function Dashboard() {
             ) : (
               data.upcomingFixedExpenses.map((f) => (
                 <View key={f.id} style={styles.fixedRow}>
-                  <Checkbox.Android
-                    status={f.paid ? 'checked' : 'unchecked'}
-                    color={COLORS.brand}
-                    onPress={async () => {
-                      await setFixedEntryPaid(f.id, yearMonth, !f.paid);
-                      reload();
-                    }}
-                  />
                   <View style={{ flex: 1 }}>
                     <Text style={[styles.fixedName, f.paid ? styles.paid : null]} numberOfLines={1}>
                       {f.description}
@@ -155,7 +146,7 @@ const styles = StyleSheet.create({
   barTrack: { height: 8, borderRadius: 4, backgroundColor: '#f1f5f9', overflow: 'hidden' },
   barFill: { height: 8, borderRadius: 4 },
   link: { color: COLORS.brandDark, fontWeight: '700', fontSize: 12 },
-  fixedRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  fixedRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 6 },
   fixedName: { color: COLORS.ink, fontWeight: '600' },
   paid: { textDecorationLine: 'line-through', color: COLORS.inkFaint },
   fixedDate: { color: COLORS.inkFaint, fontSize: 11 },
