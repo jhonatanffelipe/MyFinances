@@ -13,7 +13,7 @@ criado: 2026-11-07
 # Plano: MyFinances Família + Supabase próprio (BYO)
 
 > [!info] Status
-> **Em implementação** no branch `v2.0.0` · Etapas 1 a 8 concluídas (desktop e mobile local-first; falta importar a v1 e o release) · Criado em 2026-11-07
+> **Em implementação** no branch `v2.0.0` · Etapas 1 a 9 concluídas (falta a Etapa 10: limpeza, release e guia) · Criado em 2026-11-07
 >
 > **Versões:** a versão atual (SQLite + OneDrive) é a **v1.0.0**. Este plano entrega a
 **v2.0.0** (família + Supabase + funcionamento offline com SQLite local).
@@ -118,7 +118,7 @@ Fluxo de conexão do celular por QR: [[fluxo-conectar-celular|Conectar celular p
 | 6 ✅ | [[etapa-06-desktop\|Desktop local-first]] | Handlers IPC sobre o core, indicador de sync, sem OneDrive | 5 |
 | 7 ✅ | [[etapa-07-totalizacao-familia\|Totalização da família]] | Dashboard local com visão Família / por membro, transferências e tempo real | 6 |
 | 8 ✅ | [[etapa-08-mobile\|Mobile local-first]] | App Android sobre o core, sem OneDrive | 5 (paralelo à 6/7) |
-| 9 | [[etapa-09-migracao-dados\|Importar o banco da v1]] | **Obrigatório na v2.0.0.** Importação do `.sqlite` da v1 no primeiro uso (e pelo Perfil), no desktop e no celular | 3, 5 |
+| 9 ✅ | [[etapa-09-migracao-dados\|Importar o banco da v1]] | **Obrigatório na v2.0.0.** Importação do `.sqlite` da v1 no primeiro uso (e pelo Perfil), no desktop e no celular | 3, 5 |
 | 10 | [[etapa-10-limpeza-release\|Limpeza, release e guia]] | Remoção do OneDrive, builds v2.0.0 e guia de instalação para amigos | 7, 8, 9 |
 
 As Etapas 3 e 4 podem andar em paralelo depois da 2. As Etapas 6–7 (desktop) e 8 (mobile)

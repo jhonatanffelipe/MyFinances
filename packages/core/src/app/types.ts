@@ -38,6 +38,8 @@ export interface AppState {
   pendingInvite: { familyName: string | null; by: string | null } | null;
   /** E-mail sugerido no login (QR "Sou eu" sem a Edge Function). */
   loginHint: { email: string | null } | null;
+  /** Logo depois de criar a família: "Você já usa o MyFinances v1? Importar / Começar do zero". */
+  offerV1Import: boolean;
   online: boolean;
 }
 
@@ -63,6 +65,7 @@ export const INITIAL_APP_STATE: AppState = {
   members: [],
   pendingInvite: null,
   loginHint: null,
+  offerV1Import: false,
   online: true,
 };
 

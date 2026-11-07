@@ -114,6 +114,12 @@ const appAPI: IAppAPI = {
   revokeDevice: (id) => invoke(C.DEVICES_REVOKE, id),
   onPairingRequest: (cb) => subscribe(C.DEVICES_PAIRING_REQUEST, cb),
 
+  selectV1File: () => invoke(C.V1_SELECT_FILE),
+  importV1: (memberId) => invoke(C.V1_IMPORT, memberId),
+  cancelV1Import: () => invoke(C.V1_CANCEL),
+  dismissV1Offer: () => invoke(C.V1_DISMISS_OFFER),
+  onV1Progress: (cb) => subscribe(C.V1_PROGRESS, cb),
+
   getSyncStatus: () => invoke(C.SYNC_STATUS),
   onSyncStatus: (cb) => subscribe(C.SYNC_STATUS_CHANGED, cb),
   syncNow: () => invoke(C.SYNC_NOW),

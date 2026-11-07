@@ -3,7 +3,15 @@
  * aparelhos e sincronização. (Os dados — categorias, lançamentos... — continuam
  * em IElectronBridge, com os mesmos canais da v1.)
  */
-import type { AppState, PairingRequestView, SyncStatusView } from '@myfinances/core';
+import type { AppState, PairingRequestView, SyncStatusView, V1ImportProgress, V1ImportReport, V1Preview } from '@myfinances/core';
+
+export type { V1ImportProgress, V1ImportReport, V1Preview } from '@myfinances/core';
+
+/** Banco da v1 escolhido: nome do arquivo e o que ele tem. */
+export interface V1FileView {
+  fileName: string;
+  preview: V1Preview;
+}
 
 export type {
   AppPhase,
@@ -85,6 +93,12 @@ export const APP_CHANNELS = {
   DEVICES_REVOKE: 'devices:revoke',
   DEVICES_PAIRING_REQUEST: 'devices:pairing-request',
 
+  V1_SELECT_FILE: 'v1:select-file',
+  V1_IMPORT: 'v1:import',
+  V1_CANCEL: 'v1:cancel',
+  V1_DISMISS_OFFER: 'v1:dismiss-offer',
+  V1_PROGRESS: 'v1:progress',
+
   SYNC_STATUS: 'sync:status',
   SYNC_STATUS_CHANGED: 'sync:status-changed',
   SYNC_NOW: 'sync:now',
@@ -128,6 +142,15 @@ export interface IAppAPI {
   listDevices(): Promise<DeviceView[]>;
   revokeDevice(id: string): Promise<void>;
   onPairingRequest(cb: (request: PairingRequestView) => void): () => void;
+
+  /** Escolhe o db_myfinances.sqlite (null = cancelou) e devolve a prévia. */
+  selectV1File(): Promise<V1FileView | null>;
+  /** Importa o arquivo escolhido para a família ativa; histórico atribuído a `memberId` (padrão: você). */
+  importV1(memberId: string | null): Promise<V1ImportReport>;
+  cancelV1Import(): Promise<void>;
+  /** "Começar do zero" no onboarding. */
+  dismissV1Offer(): Promise<AppState>;
+  onV1Progress(cb: (progress: V1ImportProgress) => void): () => void;
 
   getSyncStatus(): Promise<SyncStatusView>;
   onSyncStatus(cb: (status: SyncStatusView) => void): () => void;

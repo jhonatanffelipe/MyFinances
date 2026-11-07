@@ -15,9 +15,12 @@ import {
 } from 'lucide-react';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { ConnectPhoneDialog } from '../../components/Devices/ConnectPhoneDialog';
+import { ImportV1Wizard } from '../../components/ImportV1/ImportV1Wizard';
+import { Dialog, DialogContent, DialogTitle } from '@mui/material';
+import { History } from 'lucide-react';
 import { MemberAvatar } from '../../components/Members/MemberAvatar';
 import { timeAgo } from '../../components/Sync/SyncIndicator';
-import { useAppState } from '../../contexts/AppStateContext';
+import { useAppState, useCanManageFamily } from '../../contexts/AppStateContext';
 import type { DeviceView } from '../../interfaces/AppBridge';
 
 type Feedback = { type: 'success' | 'error'; message: string } | null;
@@ -86,6 +89,8 @@ function compressImage(file: File): Promise<string> {
 
 export function ProfilePage() {
   const { state, apply, requestSignOut } = useAppState();
+  const canManage = useCanManageFamily();
+  const [v1Open, setV1Open] = useState(false);
   const user = state.user!;
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -385,6 +390,21 @@ export function ProfilePage() {
             </div>
           </Card>
 
+          {canManage && (
+            <Card icon={History} title="Banco da v1">
+              <p className="text-xs text-slate-500 mb-4">
+                Importe o db_myfinances.sqlite da v1 (o seu ou o de outra pessoa da família). Importar de novo não duplica nada.
+              </p>
+              <button
+                type="button"
+                onClick={() => setV1Open(true)}
+                className="w-full py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold text-xs cursor-pointer"
+              >
+                Importar banco da v1
+              </button>
+            </Card>
+          )}
+
           <button
             type="button"
             onClick={() => requestSignOut()}
@@ -410,6 +430,11 @@ export function ProfilePage() {
         O aparelho perde o acesso à sua conta. Pode levar até 1 hora para ele parar de sincronizar (o acesso já liberado expira
         sozinho).
       </ConfirmDialog>
+
+      <Dialog open={v1Open} onClose={() => setV1Open(false)} maxWidth="sm" fullWidth PaperProps={{ className: 'rounded-3xl p-2 shadow-2xl border border-slate-100' }}>
+        <DialogTitle className="font-bold text-xl text-slate-900">Importar banco da v1</DialogTitle>
+        <DialogContent>{v1Open && <ImportV1Wizard onDone={() => setV1Open(false)} />}</DialogContent>
+      </Dialog>
 
       <ConnectPhoneDialog
         open={phoneOpen}

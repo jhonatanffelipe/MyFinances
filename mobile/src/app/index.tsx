@@ -15,7 +15,7 @@ export default function Gate() {
     case 'family':
       return <Redirect href="/family" />;
     case 'ready':
-      return <Redirect href="/(tabs)" />;
+      return <Redirect href={state.offerV1Import ? '/v1-offer' : '/(tabs)'} />;
     default:
       return (
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.canvas }}>

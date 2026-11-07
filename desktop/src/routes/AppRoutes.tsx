@@ -9,12 +9,14 @@ import { ImportMovementsPage } from '../pages/import-movements';
 import { MembersPage } from '../pages/members';
 import { MovementsPage } from '../pages/movements';
 import { OnboardingGate } from '../pages/onboarding';
+import { V1OfferView } from '../pages/onboarding/V1OfferView';
 import { ProfilePage } from '../pages/profile';
 
 /** Antes de "ready" (conectar, login, família) mostra o onboarding; depois, as telas do app. */
 export function AppRoutes() {
   const { state } = useAppState();
   if (state.phase !== 'ready') return <OnboardingGate />;
+  if (state.offerV1Import) return <V1OfferView />;
 
   return (
     <HashRouter>

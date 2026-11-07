@@ -7,7 +7,7 @@ aliases:
   - "Etapa 9"
   - "Importar o banco da v1"
 etapa: 9
-status: pendente
+status: concluída
 plano: "[[README|Plano v2.0.0]]"
 depende_de:
   - "[[etapa-03-sincronizacao]]"
@@ -77,13 +77,36 @@ Funciona **offline**: os dados entram no banco local na hora e sobem quando houv
 
 ## Tarefas
 
-- [ ] `ImportV1Database` (use case no core): validar → prévia → importar → relatório,
+- [x] `ImportV1Database` (use case no core): validar → prévia → importar → relatório,
   recebendo um `DbAdapter` aberto sobre o arquivo da v1.
-- [ ] Tela de importação no onboarding e no Perfil, nos dois apps.
-- [ ] Barra de progresso da gravação local e do envio (status do `SyncEngine`).
-- [ ] Testes com fixtures: um banco v1 "antigo" (sem as colunas adicionadas depois), um banco v1
+- [x] Tela de importação no onboarding e no Perfil, nos dois apps.
+- [x] Barra de progresso da gravação local e do envio (status do `SyncEngine`).
+- [x] Testes com fixtures: um banco v1 "antigo" (sem as colunas adicionadas depois), um banco v1
   atual e um banco com FKs órfãs. Conferir que os totais por mês da v1 batem com os da v2 e
   que reimportar não duplica nada.
+
+## Como ficou (2026-11-07)
+
+- **Core:** `core.importV1.preview` e `core.importV1.execute` (`use-cases/importV1.ts`),
+  recebendo um `DbAdapter` sobre uma CÓPIA do arquivo (desktop: sql.js em memória; celular:
+  `deserializeDatabaseAsync`). Só OWNER/ADMIN importam; o histórico vai para o membro escolhido.
+- **Idempotência (ajuste ao schema real):** só `movements` tem `import_hash`. Categorias e
+  cartões são reaproveitados pelo nome; fixos ganham id determinístico
+  (`família + identidade do banco v1 + id antigo`, repositório aceita id explícito); baixas
+  usam o `setPaid` idempotente. A "identidade" vem das linhas mais antigas do banco (primeiro
+  usuário, categoria e lançamento), não do hash do arquivo: assim, importar uma cópia MAIS
+  NOVA do mesmo banco traz só o que é novo. O que a família excluiu depois não volta.
+- **Fixos da v1** são gravados pelo repositório, sem regerar lançamentos: os lançamentos que a
+  v1 gerou vêm do arquivo, com `fixed_expense_id` remontado.
+- **Onboarding:** o `AppSession` expõe `offerV1Import` logo após criar a família (tela
+  "Você já usa o MyFinances v1?"); some em "Começar do zero" ou no "Ir para o app" do relatório.
+  No Perfil, card "Banco da v1" (OWNER/ADMIN), no desktop e no celular.
+- **Verificado:** 10 testes com fixtures (banco v1 antigo e atual, FKs órfãs, reimportação,
+  cópia mais nova, excluídos não voltam, segundo membro, permissões, arquivo intacto);
+  integração com 3 mil lançamentos em 24 meses (envio em ~1,7 s; o celular de outro membro vê
+  os mesmos totais da v1 em todos os meses); E2E no app desktop pelo onboarding.
+- **Não verificado em aparelho:** a escolha do arquivo e o `deserializeDatabaseAsync` no
+  celular (sem Android nesta máquina).
 
 ## Pronto quando
 

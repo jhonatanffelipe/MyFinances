@@ -136,7 +136,8 @@ export interface MovementRepository {
   count(filters: MovementFilters): Promise<number>;
   summary(filters: MovementFilters): Promise<MovementSummary>;
   findById(id: Uuid): Promise<Movement | null>;
-  existingImportHashes(hashes: string[]): Promise<Set<string>>;
+  /** `includeDeleted`: também os excluídos (reimportar não ressuscita o que a família apagou). */
+  existingImportHashes(hashes: string[], options?: { includeDeleted?: boolean }): Promise<Set<string>>;
   create(ctx: WriteContext, data: MovementData): Promise<Uuid>;
   update(ctx: WriteContext, id: Uuid, data: MovementData): Promise<void>;
   softDelete(ctx: WriteContext, id: Uuid): Promise<void>;
@@ -178,7 +179,10 @@ export interface FixedExpenseListQuery extends PageRequest<FixedExpenseOrderFiel
 export interface FixedExpenseRepository {
   list(query: FixedExpenseListQuery): Promise<PaginatedResult<FixedExpense>>;
   findById(id: Uuid): Promise<FixedExpense | null>;
-  create(ctx: WriteContext, data: FixedExpenseData): Promise<Uuid>;
+  /** `id` explícito: importação da v1 usa id determinístico (reimportar não duplica). */
+  create(ctx: WriteContext, data: FixedExpenseData, id?: Uuid): Promise<Uuid>;
+  /** Ids que já existem na família, inclusive excluídos. */
+  existingIds(ids: Uuid[]): Promise<Set<Uuid>>;
   update(ctx: WriteContext, id: Uuid, data: FixedExpenseData): Promise<void>;
   softDelete(ctx: WriteContext, id: Uuid): Promise<void>;
   setPaid(ctx: WriteContext, id: Uuid, yearMonth: string, paid: boolean): Promise<void>;

@@ -34,6 +34,11 @@ export function registerAppIpc(c: AppController) {
   handle(APP_CHANNELS.DEVICES_LIST, () => s.listDevices());
   handle(APP_CHANNELS.DEVICES_REVOKE, (id: string) => s.revokeDevice(id));
 
+  handle(APP_CHANNELS.V1_SELECT_FILE, () => c.selectV1File());
+  handle(APP_CHANNELS.V1_IMPORT, (memberId: string | null) => c.importV1(memberId));
+  handle(APP_CHANNELS.V1_CANCEL, () => c.closeV1Source());
+  handle(APP_CHANNELS.V1_DISMISS_OFFER, () => s.dismissV1Offer());
+
   handle(APP_CHANNELS.SYNC_STATUS, () => s.syncStatus());
   handle(APP_CHANNELS.SYNC_NOW, () => s.syncNow());
   handle(APP_CHANNELS.SYNC_FAILED, () => s.listSyncFailed());

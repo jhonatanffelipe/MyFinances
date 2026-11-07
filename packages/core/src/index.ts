@@ -42,3 +42,4 @@ export * from './app/types';
 export { AppSession } from './app/appSession';
 export type { AppSessionDependencies, AppSupabaseClient, LocalDatabaseHandle, RealtimeChannelLike } from './app/appSession';
 export { ScanDeviceLink, WaitPairingApproval, CompletePairing } from './use-cases/devices';
+export type { V1Preview, V1ImportReport, V1ImportProblem, V1ImportProgress, V1Table } from './use-cases/importV1';

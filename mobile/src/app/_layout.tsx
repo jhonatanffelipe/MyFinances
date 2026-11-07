@@ -58,6 +58,8 @@ export default function RootLayout() {
             <Stack.Screen name="members" options={{ title: 'Membros' }} />
             <Stack.Screen name="profile" options={{ title: 'Meu perfil' }} />
             <Stack.Screen name="sync" options={{ title: 'Sincronização' }} />
+            <Stack.Screen name="v1-offer" options={{ headerShown: false }} />
+            <Stack.Screen name="import-v1" options={{ title: 'Importar banco da v1' }} />
           </Stack>
         </AppStateProvider>
       </PaperProvider>

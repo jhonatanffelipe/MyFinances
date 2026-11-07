@@ -107,14 +107,14 @@ export class SqliteMovementRepository extends SqliteRepository implements Moveme
     return this.db.first<Movement>(`${SELECT} WHERE m.id = ? AND m.family_id = ? AND m.deleted_at IS NULL`, [id, this.familyId()]);
   }
 
-  async existingImportHashes(hashes: string[]): Promise<Set<string>> {
+  async existingImportHashes(hashes: string[], options: { includeDeleted?: boolean } = {}): Promise<Set<string>> {
     const found = new Set<string>();
     const familyId = this.familyId();
     // Lotes de 500 para não estourar o limite de parâmetros do SQLite
     for (let i = 0; i < hashes.length; i += 500) {
       const chunk = hashes.slice(i, i + 500);
       const rows = await this.db.all<{ import_hash: string }>(
-        `SELECT import_hash FROM movements WHERE family_id = ? AND deleted_at IS NULL
+        `SELECT import_hash FROM movements WHERE family_id = ?${options.includeDeleted ? '' : ' AND deleted_at IS NULL'}
            AND import_hash IN (${chunk.map(() => '?').join(',')})`,
         [familyId, ...chunk],
       );

@@ -53,8 +53,21 @@ export class SqliteFixedExpenseRepository extends SqliteRepository implements Fi
     return row ? mapFixed(row) : null;
   }
 
-  async create(ctx: WriteContext, data: FixedExpenseData): Promise<Uuid> {
-    const id = this.store.newId();
+  async existingIds(ids: Uuid[]): Promise<Set<Uuid>> {
+    const found = new Set<Uuid>();
+    for (let i = 0; i < ids.length; i += 500) {
+      const chunk = ids.slice(i, i + 500);
+      const rows = await this.db.all<{ id: Uuid }>(
+        `SELECT id FROM fixed_expenses WHERE family_id = ? AND id IN (${chunk.map(() => '?').join(',')})`,
+        [this.familyId(), ...chunk],
+      );
+      rows.forEach((r) => found.add(r.id));
+    }
+    return found;
+  }
+
+  async create(ctx: WriteContext, data: FixedExpenseData, explicitId?: Uuid): Promise<Uuid> {
+    const id = explicitId ?? this.store.newId();
     const now = ctx.now();
     await ctx.tx.run(
       `INSERT INTO fixed_expenses (id, family_id, member_id, description, amount, type, category_id, credit_card_id, recurrence,

@@ -96,6 +96,7 @@ export class AppSession {
   private pendingInviteInfo: AppState['pendingInvite'] = null;
   private loginHint: AppState['loginHint'] = null;
   private pairingCode: ConnectionCode | null = null;
+  private offerV1Import = false;
   private phase: AppState['phase'] = 'loading';
   private paused = false;
   private dataChanged: { timer: unknown; tables: Set<string> } = { timer: null, tables: new Set() };
@@ -238,6 +239,7 @@ export class AppSession {
       members: members.map((m) => ({ user_id: m.user_id, name: m.name, role: m.role, active: m.active, avatar_url: m.avatar_url })),
       pendingInvite: this.pendingInviteInfo,
       loginHint: this.loginHint,
+      offerV1Import: this.offerV1Import && !!ws,
       online: this.deps.network.isOnline(),
     };
   }
@@ -416,6 +418,7 @@ export class AppSession {
     await this.ws().account.signOut.execute({ force });
     await this.closeWorkspace();
     this.profile = null;
+    this.offerV1Import = false;
     this.phase = 'login';
     return this.publish();
   }
@@ -437,6 +440,13 @@ export class AppSession {
   async createFamily(name: string): Promise<AppState> {
     const state = await this.ws().account.families.create.execute(name);
     await this.activateFamily(state.activeFamilyId!, { initialLoad: true });
+    this.offerV1Import = true; // família nova: oferece importar o banco da v1
+    return this.publish();
+  }
+
+  /** "Começar do zero" ou importação concluída: some a oferta (continua no Perfil). */
+  dismissV1Offer(): Promise<AppState> {
+    this.offerV1Import = false;
     return this.publish();
   }
 

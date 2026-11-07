@@ -5,7 +5,8 @@ import { Screen } from '../components/Screen';
 import { Card } from '../components/Card';
 import { confirm } from '../components/confirm';
 import { ErrorText, InfoBox } from '../components/Onboarding';
-import { useAppState } from '../contexts/AppStateContext';
+import { router } from 'expo-router';
+import { useAppState, useCanManageFamily } from '../contexts/AppStateContext';
 import { appSession } from '../engine/session';
 import { relativeTime } from '../utils/format';
 import { COLORS } from '../theme/tokens';
@@ -15,6 +16,7 @@ type Device = Awaited<ReturnType<typeof appSession.listDevices>>[number];
 /** Perfil: dados, senha, aparelhos conectados e o banco conectado. */
 export default function Profile() {
   const { state, apply, requestSignOut, notify } = useAppState();
+  const canManage = useCanManageFamily();
   const user = state.user!;
   const [name, setName] = useState(user.name);
   const [phone, setPhone] = useState(user.phone ?? '');
@@ -122,6 +124,15 @@ export default function Profile() {
         )}
         <Text style={[styles.muted, { marginTop: 8 }]}>Para conectar outro celular, use Perfil → Conectar celular no computador.</Text>
       </Card>
+
+      {canManage ? (
+        <Card title="Banco da v1">
+          <Text style={styles.muted}>Importe o db_myfinances.sqlite da v1 (o seu ou o de outra pessoa da família). Importar de novo não duplica nada.</Text>
+          <Button mode="outlined" icon="database-import-outline" style={{ marginTop: 10 }} onPress={() => router.push('/import-v1')}>
+            Importar banco da v1
+          </Button>
+        </Card>
+      ) : null}
 
       <Card title="Banco conectado">
         <Text style={styles.muted}>Projeto {state.connection?.projectRef}</Text>

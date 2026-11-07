@@ -14,6 +14,7 @@ import { GetDashboard } from './use-cases/dashboard';
 import * as fixed from './use-cases/fixedExpenses';
 import { AnalyzeImport, ExecuteImport } from './use-cases/imports';
 import * as movements from './use-cases/movements';
+import { ImportV1Database, PreviewV1Import } from './use-cases/importV1';
 
 export interface CoreDependencies {
   db: DbAdapter;
@@ -82,6 +83,11 @@ export async function createCore(deps: CoreDependencies) {
     },
     dashboard: {
       get: new GetDashboard(repos.dashboard),
+    },
+    /** Banco da v1 (db_myfinances.sqlite) → família ativa. */
+    importV1: {
+      preview: new PreviewV1Import(),
+      execute: new ImportV1Database(store, repos.families, repos.categories, repos.cards, repos.fixed, repos.movements),
     },
   };
 }
