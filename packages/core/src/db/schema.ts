@@ -87,7 +87,6 @@ const MIGRATIONS: string[] = [
     year_month       TEXT NOT NULL,
     paid_by          TEXT NOT NULL,
     paid_at          TEXT NOT NULL,
-    created_at       TEXT NOT NULL,
     updated_at       TEXT NOT NULL,
     deleted_at       TEXT,
     change_xid       TEXT,

@@ -73,6 +73,20 @@ drop policy if exists sync_conflicts_read on public.sync_conflicts;
 create policy sync_conflicts_read on public.sync_conflicts for select to authenticated
   using (family_id in (select public.my_family_ids()));
 
+-- Grava o log de conflito. sync_push roda como o usuário (RLS vale) e o app não tem
+-- permissão de escrita em sync_conflicts; esta função é o único caminho de escrita.
+create or replace function public.log_sync_conflict(
+  p_family_id uuid, p_table text, p_row_id uuid, p_base xid8, p_server xid8, p_overwritten jsonb
+) returns void
+language plpgsql security definer set search_path = '' as $$
+begin
+  if not public.is_family_member(p_family_id) then raise exception 'forbidden'; end if;
+  insert into public.sync_conflicts (family_id, table_name, row_id, base_xid, server_xid, pushed_by, overwritten)
+  values (p_family_id, p_table, p_row_id, p_base, p_server, auth.uid(), p_overwritten);
+end $$;
+revoke all on function public.log_sync_conflict(uuid, text, uuid, xid8, xid8, jsonb) from public, anon;
+grant execute on function public.log_sync_conflict(uuid, text, uuid, xid8, xid8, jsonb) to authenticated;
+
 -- ---------- PUSH ----------
 -- p_changes: [{ "table": "movements", "row": {...colunas...}, "base_xid": "123" | null }]
 -- Exclusão = row com deleted_at preenchido.
@@ -106,8 +120,8 @@ begin
       into v_current using (v_row ->> 'id')::uuid;
 
     if v_current is not null and v_base is distinct from (v_current ->> 'change_xid')::xid8 then
-      insert into public.sync_conflicts (family_id, table_name, row_id, base_xid, server_xid, overwritten)
-      values (p_family_id, v_table, (v_row ->> 'id')::uuid, v_base, (v_current ->> 'change_xid')::xid8, v_current);
+      perform public.log_sync_conflict(p_family_id, v_table, (v_row ->> 'id')::uuid, v_base,
+                                       (v_current ->> 'change_xid')::xid8, v_current);
       v_conflicts := v_conflicts || jsonb_build_object('table', v_table, 'id', v_row ->> 'id');
     end if;
 
@@ -131,31 +145,74 @@ begin
     v_applied := v_applied + 1;
   end loop;
 
-  return jsonb_build_object('applied', v_applied, 'conflicts', v_conflicts);
+  -- xid desta transação = nova change_xid de todas as linhas aplicadas. O cliente grava
+  -- como versão local, para a próxima edição não acusar conflito consigo mesma.
+  return jsonb_build_object('applied', v_applied, 'conflicts', v_conflicts,
+                            'xid', pg_current_xact_id()::text);
 end $$;
 
--- ---------- PULL ----------
--- Devolve as mudanças da família desde p_cursor (null = carga inicial) e o novo cursor.
--- Inclui linhas com deleted_at (tombstones). Membros/perfis/família vêm sempre completos
--- (são poucas linhas) para o app funcionar offline com nomes atualizados.
-create or replace function public.sync_pull(p_family_id uuid, p_cursor text default null)
-returns jsonb
+-- ---------- PULL (paginado) ----------
+-- Devolve as mudanças da família desde p_cursor (null = carga inicial), no máximo
+-- p_limit linhas por chamada, percorrendo as tabelas na ordem das FKs e cada uma por
+-- (change_xid, id). Enquanto has_more = true, o cliente chama de novo com o `page`
+-- recebido. O cursor final (`cursor`) é fixado na PRIMEIRA página e só deve ser salvo
+-- depois da última: linhas alteradas durante a paginação voltam no próximo pull.
+-- Inclui linhas com deleted_at (tombstones). Família e membros vêm sempre completos.
+drop function if exists public.sync_pull(uuid, text);
+
+create or replace function public.sync_pull(
+  p_family_id uuid,
+  p_cursor    text  default null,
+  p_limit     int   default 1000,
+  p_page      jsonb default null
+) returns jsonb
 language plpgsql stable security invoker set search_path = '' as $$
 declare
-  v_from   xid8 := coalesce(nullif(p_cursor, '')::xid8, '0'::xid8);
-  v_next   xid8 := pg_snapshot_xmin(pg_current_snapshot());
-  v_result jsonb := '{}'::jsonb;
-  t        text;
-  v_rows   jsonb;
+  v_tables  text[] := array['categories', 'credit_cards', 'fixed_expenses', 'fixed_expense_payments', 'movements'];
+  v_from    xid8   := coalesce(nullif(p_cursor, '')::xid8, '0'::xid8);
+  v_next    text   := coalesce(p_page ->> 'cursor', pg_snapshot_xmin(pg_current_snapshot())::text);
+  v_idx     int    := coalesce((p_page ->> 't')::int, 1);
+  v_last_x  xid8   := nullif(p_page ->> 'x', '')::xid8;
+  v_last_id uuid   := nullif(p_page ->> 'id', '')::uuid;
+  v_limit   int    := least(greatest(coalesce(p_limit, 1000), 1), 5000);
+  v_left    int;
+  v_result  jsonb  := '{}'::jsonb;
+  v_rows    jsonb;
+  v_count   int;
+  v_page    jsonb  := null;
 begin
   if not public.is_family_member(p_family_id) then raise exception 'forbidden'; end if;
+  v_left := v_limit;
 
-  foreach t in array array['categories', 'credit_cards', 'fixed_expenses', 'fixed_expense_payments', 'movements'] loop
+  for i in 1 .. array_length(v_tables, 1) loop
+    if i < v_idx then
+      v_result := v_result || jsonb_build_object(v_tables[i], '[]'::jsonb);
+      continue;
+    end if;
+    if v_left <= 0 then
+      v_result := v_result || jsonb_build_object(v_tables[i], '[]'::jsonb);
+      continue;
+    end if;
+
     execute format(
-      'select coalesce(jsonb_agg(to_jsonb(x) - ''change_xid'' || jsonb_build_object(''change_xid'', x.change_xid::text)), ''[]'')
-         from public.%I x where x.family_id = $1 and x.change_xid >= $2', t)
-      into v_rows using p_family_id, v_from;
-    v_result := v_result || jsonb_build_object(t, v_rows);
+      'select coalesce(jsonb_agg(to_jsonb(x) - ''change_xid'' || jsonb_build_object(''change_xid'', x.change_xid::text)
+                                 order by x.change_xid, x.id), ''[]''), count(*)
+         from (select * from public.%I t
+                where t.family_id = $1 and t.change_xid >= $2
+                  and ($3::xid8 is null or (t.change_xid, t.id) > ($3::xid8, $4::uuid))
+                order by t.change_xid, t.id
+                limit $5) x', v_tables[i])
+      into v_rows, v_count
+      using p_family_id, v_from, case when i = v_idx then v_last_x end, case when i = v_idx then v_last_id end, v_left;
+
+    v_result := v_result || jsonb_build_object(v_tables[i], v_rows);
+    v_left := v_left - v_count;
+
+    if v_left <= 0 then
+      -- Página cheia: retoma desta tabela, depois da última linha devolvida
+      v_page := jsonb_build_object('cursor', v_next, 't', i,
+                                   'x', v_rows -> -1 ->> 'change_xid', 'id', v_rows -> -1 ->> 'id');
+    end if;
   end loop;
 
   v_result := v_result || jsonb_build_object(
@@ -166,11 +223,9 @@ begin
                 from public.family_members fm join public.profiles pr on pr.id = fm.user_id
                 where fm.family_id = p_family_id));
 
-  return jsonb_build_object('cursor', v_next::text, 'changes', v_result);
+  return jsonb_build_object('cursor', v_next, 'changes', v_result,
+                            'has_more', v_page is not null, 'page', v_page);
 end $$;
 
-grant execute on function public.sync_push(uuid, jsonb) to authenticated;
-grant execute on function public.sync_pull(uuid, text)  to authenticated;
-
--- TODO Etapa 3: paginar o pull (carga inicial grande) — limitar por tabela e
--- devolver "has_more"; o cursor só avança quando todas as páginas chegarem.
+grant execute on function public.sync_push(uuid, jsonb)            to authenticated;
+grant execute on function public.sync_pull(uuid, text, int, jsonb) to authenticated;

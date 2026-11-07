@@ -15,6 +15,8 @@ alter default privileges in schema public revoke all on functions from anon, pub
 
 -- Única exceção: a tela de conexão valida o schema antes do login.
 grant execute on function public.app_schema_version() to anon, authenticated;
+-- revoke de PUBLIC acima não tira o grant explícito feito na 003
+grant execute on function public.log_sync_conflict(uuid, text, uuid, xid8, xid8, jsonb) to authenticated;
 
 -- Tabelas de controle não são editáveis pelo app.
 revoke insert, update, delete on public.app_meta       from authenticated;

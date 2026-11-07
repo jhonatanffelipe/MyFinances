@@ -13,7 +13,8 @@
     "functions:serve": "supabase functions serve --no-verify-jwt",
     "core:install": "yarn --cwd packages/core install",
     "core:test": "yarn --cwd packages/core test",
-    "core:typecheck": "yarn --cwd packages/core typecheck"
+    "core:typecheck": "yarn --cwd packages/core typecheck",
+    "core:test:sync": "yarn --cwd packages/core test:sync"
   },
   "devDependencies": {
     "supabase": "^2.0.0"

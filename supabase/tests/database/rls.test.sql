@@ -316,7 +316,7 @@ select is(
   0, 'anon não tem nenhum privilégio em tabela');
 select ok(has_function_privilege('anon', 'public.app_schema_version()', 'execute'),
   'anon consulta a versão do schema');
-select ok(not has_function_privilege('anon', 'public.sync_pull(uuid, text)', 'execute'),
+select ok(not has_function_privilege('anon', 'public.sync_pull(uuid, text, int, jsonb)', 'execute'),
   'anon não executa sync_pull');
 select ok(not has_function_privilege('anon', 'public.accept_family_invite(text)', 'execute'),
   'anon não aceita convite');

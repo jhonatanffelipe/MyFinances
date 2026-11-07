@@ -2,6 +2,7 @@ import type { SqlParam } from '../../db/adapter';
 import type { WriteContext } from '../../db/localStore';
 import type { FixedExpenseData, FixedExpenseListQuery, FixedExpenseRepository } from '../../domain/repositories';
 import { resolveYearMonth } from '../../domain/date';
+import { deterministicUuid } from '../../domain/deterministicId';
 import type { FixedExpense, PaginatedResult, Uuid } from '../../domain/types';
 import { SqliteRepository, bool, likeParam, pageClause, safeOrder, sqlDirection, toPage } from './base';
 
@@ -117,11 +118,12 @@ export class SqliteFixedExpenseRepository extends SqliteRepository implements Fi
         await ctx.markDirty('fixed_expense_payments', existing.id);
         return;
       }
-      const paymentId = this.store.newId();
+      // id derivado de (família, fixo, mês): dois aparelhos offline geram o mesmo id
+      const paymentId = deterministicUuid(`fixed_expense_payment:${familyId}:${id}:${yearMonth}`);
       await ctx.tx.run(
-        `INSERT INTO fixed_expense_payments (id, family_id, fixed_expense_id, year_month, paid_by, paid_at, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-        [paymentId, familyId, id, yearMonth, this.userId(), now, now, now],
+        `INSERT INTO fixed_expense_payments (id, family_id, fixed_expense_id, year_month, paid_by, paid_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [paymentId, familyId, id, yearMonth, this.userId(), now, now],
       );
       await ctx.markDirty('fixed_expense_payments', paymentId);
       return;

@@ -24,3 +24,6 @@ export type { ImportAnalysis } from './use-cases/imports';
 export { createCore } from './createCore';
 export type { Core, CoreDependencies } from './createCore';
 export { createSqlJsAdapter } from './db/sqljsAdapter';
+export * from './sync/remote';
+export * from './sync/syncEngine';
+export { deterministicUuid } from './domain/deterministicId';
