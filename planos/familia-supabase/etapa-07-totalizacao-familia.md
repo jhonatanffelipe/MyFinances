@@ -21,7 +21,7 @@ todos os membros da família, com a opção de ver um membro só.
 
 - [ ] **Totais calculados no SQLite local**, para o dashboard funcionar offline e refletir na
   hora o que acabou de ser lançado. `GetDashboard` no core reimplementa em SQL do SQLite a
-  mesma regra de [[sql/003_rpc.sql|sql/003_rpc.sql]] (que fica como especificação de
+  mesma regra de `supabase/migrations/20261107000005_dashboard.sql` (que fica como especificação de
   referência e não é chamada pelo app). Todas as consultas filtram `deleted_at IS NULL`.
 - [ ] Trocar o loop de 5 consultas do histórico mensal (`dashboard.ipc.ts`) por uma consulta
   agrupada por `strftime('%Y-%m', date)`.

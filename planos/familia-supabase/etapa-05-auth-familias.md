@@ -60,10 +60,10 @@ introduzir família, membros e convites.
 
 ### Conectar celular por QR Code (pareamento + convite)
 Especificação completa: [[fluxo-conectar-celular|Conectar celular por QR]].
-- [ ] Aplicar [[sql/005_device_link.sql|sql/005_device_link.sql]]: `device_pairings`,
+- [ ] Aplicar `supabase/migrations/20261107000004_device_link.sql`: `device_pairings`,
   `user_devices`, `create_device_link`, `resolve_device_pairing`, `register_device` e
   `revoke_device`.
-- [ ] Edge Function [[functions/pair-device/index.ts|pair-device]] em `supabase/functions/`,
+- [ ] Edge Function `pair-device` em `supabase/functions/`,
   publicada com `--no-verify-jwt`; ações `ping`, `scan` e `status`.
 - [ ] Use cases no core: `CreateDeviceLink` (computador), `ScanDeviceLink` /
   `WaitPairingApproval` / `CompletePairing` (celular), `ResolvePairing`, `RegisterDevice`,

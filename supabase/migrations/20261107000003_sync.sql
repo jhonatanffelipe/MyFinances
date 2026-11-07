@@ -1,5 +1,5 @@
 -- =====================================================================
--- MyFinances · 004_sync.sql  (RASCUNHO — validar na Etapa 3)
+-- MyFinances · 003_sync.sql
 -- Suporte à sincronização offline-first (SQLite local <-> Supabase).
 --
 -- Decisões:
@@ -58,8 +58,9 @@ create table if not exists public.sync_conflicts (
   created_at  timestamptz not null default now()
 );
 alter table public.sync_conflicts enable row level security;
+drop policy if exists sync_conflicts_read on public.sync_conflicts;
 create policy sync_conflicts_read on public.sync_conflicts for select to authenticated
-  using (public.is_family_member(family_id));
+  using (family_id in (select public.my_family_ids()));
 
 -- ---------- PUSH ----------
 -- p_changes: [{ "table": "movements", "row": {...colunas...}, "base_xid": "123" | null }]

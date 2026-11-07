@@ -1,5 +1,5 @@
 -- =====================================================================
--- MyFinances · 001_schema.sql  (RASCUNHO — validar na Etapa 1)
+-- MyFinances · 001_schema.sql
 -- Idempotente o suficiente para rodar no SQL Editor de um projeto novo.
 -- Requer PostgreSQL 15+ (ON DELETE SET NULL com lista de colunas).
 -- =====================================================================

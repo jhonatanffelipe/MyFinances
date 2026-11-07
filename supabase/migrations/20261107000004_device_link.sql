@@ -1,5 +1,5 @@
 -- =====================================================================
--- MyFinances · 005_device_link.sql  (RASCUNHO — validar na Etapa 5)
+-- MyFinances · 004_device_link.sql
 -- "Conectar celular" por QR Code: pareamento (mesma pessoa, outro aparelho)
 -- + convite (outra pessoa da família) no mesmo QR.
 --
@@ -44,14 +44,25 @@ alter table public.device_pairings enable row level security;
 alter table public.user_devices    enable row level security;
 
 -- O computador acompanha (Realtime) só os próprios pedidos; escrita só via RPC/Edge Function
+drop policy if exists device_pairings_read on public.device_pairings;
 create policy device_pairings_read on public.device_pairings for select to authenticated
   using (user_id = (select auth.uid()));
+drop policy if exists user_devices_read on public.user_devices;
 create policy user_devices_read on public.user_devices for select to authenticated
   using (user_id = (select auth.uid()));
 revoke insert, update, delete on public.device_pairings from authenticated;
 revoke insert, update, delete on public.user_devices    from authenticated;
 
-alter publication supabase_realtime add table public.device_pairings;
+do $$
+declare t text;
+begin
+  foreach t in array array['device_pairings'] loop
+    if not exists (select 1 from pg_publication_tables
+                   where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = t) then
+      execute format('alter publication supabase_realtime add table public.%I', t);
+    end if;
+  end loop;
+end $$;
 
 -- ---------- Computador: gerar o QR ----------
 -- Retorna o token de pareamento e, se o usuário for OWNER/ADMIN, um token de convite

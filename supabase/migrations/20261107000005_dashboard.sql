@@ -1,5 +1,6 @@
 -- =====================================================================
--- MyFinances · 003_rpc.sql  (RASCUNHO — validar na Etapa 6)
+-- MyFinances · 005_dashboard.sql
+-- Especificação de referência: o app calcula os mesmos totais no SQLite local.
 -- Agregações do dashboard. SECURITY INVOKER: o RLS de movements continua
 -- valendo, então a função nunca devolve dados de família alheia.
 --
@@ -31,7 +32,7 @@ language sql stable security invoker set search_path = '' as $$
              else 0
            end as signed_amount
     from public.movements m
-    where m.family_id = p_family_id
+    where m.family_id = p_family_id and m.deleted_at is null
       and (p_member_id is null
            or m.member_id = p_member_id
            or (m.type = 'TRANSFER' and m.to_member_id = p_member_id))
@@ -64,7 +65,7 @@ language sql stable security invoker set search_path = '' as $$
                sum(case when mv.type = 'INCOME'  then mv.amount else 0 end) as income,
                sum(case when mv.type = 'EXPENSE' then mv.amount else 0 end) as expense
         from public.movements mv join public.profiles pr on pr.id = mv.member_id
-        where mv.family_id = p_family_id and mv.type <> 'TRANSFER'
+        where mv.family_id = p_family_id and mv.type <> 'TRANSFER' and mv.deleted_at is null
           and mv.date between p_start and p_end
         group by mv.member_id, pr.name) x), '[]'::jsonb)
   );
@@ -91,6 +92,7 @@ language sql stable security invoker set search_path = '' as $$
   from months
   left join public.movements mv
     on mv.family_id = p_family_id
+   and mv.deleted_at is null
    and mv.type <> 'TRANSFER'
    and mv.date >= months.m and mv.date < (months.m + interval '1 month')
    and (p_member_id is null or mv.member_id = p_member_id)

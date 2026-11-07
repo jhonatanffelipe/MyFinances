@@ -66,7 +66,7 @@ dados. Logout pergunta se apaga a cópia local (se houver itens pendentes no out
    `sync_conflicts` e devolve a lista. O app mostra um aviso discreto ("2 lançamentos foram
    alterados por outra pessoa") com acesso ao histórico.
 7. **Cursor de pull = `xid8`**, não timestamp nem sequence. Explicação no cabeçalho de
-   [[sql/004_sync.sql|sql/004_sync.sql]]. O upsert local é idempotente porque o pull pode
+   `supabase/migrations/20261107000003_sync.sql`. O upsert local é idempotente porque o pull pode
    repetir linhas.
 8. **Pull não sobrescreve pendência local:** se a linha recebida tem item no outbox, o local
    prevalece até o push (senão a edição offline "voltaria" antes de subir).
@@ -78,7 +78,7 @@ dados. Logout pergunta se apaga a cópia local (se houver itens pendentes no out
 
 ## Tarefas
 
-- [ ] Aplicar `sql/004_sync.sql`: colunas de sync, trigger `sync_stamp`, `sync_push`,
+- [ ] Aplicar `supabase/migrations/20261107000003_sync.sql`: colunas de sync, trigger `sync_stamp`, `sync_push`,
   `sync_pull` e `sync_conflicts`. Revogar `DELETE` físico do `authenticated`.
 - [ ] Paginação do `sync_pull` (`limit` por tabela + `has_more`).
 - [ ] `SyncEngine` no core, independente de plataforma: recebe `DbAdapter`, client Supabase e

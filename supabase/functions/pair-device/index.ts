@@ -1,5 +1,5 @@
 // =====================================================================
-// MyFinances · Edge Function "pair-device"  (RASCUNHO — validar na Etapa 5)
+// MyFinances · Edge Function "pair-device" (validada por supabase/tests/pair-device.e2e.mjs)
 //
 // Única peça do sistema que usa a service_role key. Ela é injetada pelo
 // próprio Supabase como variável de ambiente da função e NUNCA sai daqui

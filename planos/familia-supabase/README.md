@@ -6,14 +6,14 @@ tags:
 aliases:
   - "Plano v2.0.0"
   - "MyFinances v2"
-status: planejado
+status: em andamento
 versao: 2.0.0
 criado: 2026-11-07
 ---
 # Plano: MyFinances Família + Supabase próprio (BYO)
 
 > [!info] Status
-> **Plano com decisões fechadas** (implementação ainda não iniciada) · Criado em 2026-11-07
+> **Em implementação** no branch `v2.0.0` · Etapa 1 concluída · Criado em 2026-11-07
 >
 > **Versões:** a versão atual (SQLite + OneDrive) é a **v1.0.0**. Este plano entrega a
 **v2.0.0** (família + Supabase + funcionamento offline com SQLite local).
@@ -59,7 +59,7 @@ criado: 2026-11-07
 | Cursor de sync | `xid8` da transação (`change_xid`) | Timestamp sofre com relógio errado; sequence "fura" com transações concorrentes |
 | Exclusão | Lógica (`deleted_at`) | Dispositivos offline precisam saber o que foi apagado |
 | Conflito | Último push vence, por linha, com log em `sync_conflicts` | Coerente com "todos editam tudo"; simples de explicar |
-| Agregações (dashboard) | SQL no SQLite local, dentro do core | Funciona offline; `003_rpc.sql` fica como especificação |
+| Agregações (dashboard) | SQL no SQLite local, dentro do core | Funciona offline; `005_dashboard.sql` fica como especificação |
 | Criação do schema | Script SQL idempotente colado no **SQL Editor** do Supabase | A anon key não executa DDL; pedir a senha do banco ao usuário seria tratar segredo sem necessidade |
 | Versão do schema | Tabela `app_meta` + RPC `app_schema_version()` | O app avisa "rode a migração X" quando o banco estiver desatualizado |
 | Convite | **Código de conexão** (URL + publishable key + token de convite, em base64url/QR) | O membro cola um código só e já entra no projeto e na família certos |
@@ -98,23 +98,19 @@ erDiagram
 Cada dispositivo tem um **SQLite local** com as mesmas tabelas da família, mais
 `_outbox` (alterações pendentes de envio), `_sync_state` (cursor) e `_sync_conflicts`.
 
-O rascunho completo está na pasta `sql/`:
-[[sql/001_schema.sql]], [[sql/002_rls.sql]],
-[[sql/003_rpc.sql]] (regra dos totais, como referência) e
-[[sql/004_sync.sql]] (sincronização) e
-[[sql/005_device_link.sql]] (QR / aparelhos conectados), mais a Edge
-Function [[functions/pair-device/index.ts|functions/pair-device]].
+O schema está em `supabase/migrations/` (fora do vault):
+`001_schema` (tabelas), `002_rls` (RLS e RPCs de família), `003_sync` (sincronização),
+`004_device_link` (QR / aparelhos conectados), `005_dashboard` (regra dos totais, como
+referência) e `006_hardening` (permissões do anon). A Edge Function fica em
+`supabase/functions/pair-device/`. O `supabase/setup.sql` é gerado por `yarn db:bundle`.
 
 Fluxo de conexão do celular por QR: [[fluxo-conectar-celular|Conectar celular por QR]].
 
 ## Etapas
 
-> [!tip] Arquivos `.sql` e `.ts` no Obsidian
-> Para os links dos rascunhos SQL e da Edge Function abrirem, ative **Settings → Files and links → Detect all file extensions**.
-
 | # | Etapa | Entrega | Depende de |
 |---|---|---|---|
-| 1 | [[etapa-01-fundacao-supabase\|Fundação Supabase]] | Schema, RLS, RPCs, Supabase local em Docker e testes de RLS | — |
+| 1 ✅ | [[etapa-01-fundacao-supabase\|Fundação Supabase]] | Schema, RLS, RPCs, Supabase local em Docker e testes de RLS | — |
 | 2 | [[etapa-02-pacote-core\|Pacote core compartilhado]] | `packages/core` com schema local, repositórios SQL (vindos do mobile) e use cases | 1 |
 | 3 | [[etapa-03-sincronizacao\|Sincronização offline-first]] | Outbox, `SyncEngine`, push/pull, conflitos e testes de convergência | 2 |
 | 4 | [[etapa-04-conexao-byo\|Conexão BYO (onboarding)]] | Tela "Conectar ao seu Supabase", validação e armazenamento seguro | 2 |

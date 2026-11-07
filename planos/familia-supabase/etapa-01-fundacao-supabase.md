@@ -7,7 +7,7 @@ aliases:
   - "Etapa 1"
   - "Fundação Supabase"
 etapa: 1
-status: pendente
+status: concluída
 plano: "[[README|Plano v2.0.0]]"
 depende_de: []
 ---
@@ -18,40 +18,85 @@ depende_de: []
 
 ## Tarefas
 
-- [ ] Criar `supabase/` na raiz do repo (`npx supabase init`) para versionar as migrações.
-- [ ] Subir o stack local com Docker (`npx supabase start`): Postgres, Auth, PostgREST e Studio.
-- [ ] Mover os rascunhos de `sql/` para `supabase/migrations/` com timestamp:
-  - `..._001_schema.sql`: tabelas, tipos, índices e triggers
-  - `..._002_rls.sql`: RLS, helpers e RPCs de família
-  - `..._003_rpc.sql`: agregações do dashboard (especificação de referência; o app calcula
-    no SQLite local)
-  - `..._004_sync.sql`: colunas de sync, `sync_push` e `sync_pull` (detalhados na Etapa 3)
-  - `..._005_device_link.sql`: pareamento por QR e aparelhos conectados (Etapa 5)
-- [ ] Mover [[functions/pair-device/index.ts|functions/pair-device]] para
-  `supabase/functions/` e servir localmente com `npx supabase functions serve`.
-- [ ] Gerar **um único `setup.sql` concatenado e idempotente** (script `yarn db:bundle`) para o
-  usuário final colar no SQL Editor. Ele é o artefato que acompanha cada release.
-- [ ] Regra de versionamento: cada migração nova incrementa `app_meta.schema_version`. O app
-  declara `MIN_SCHEMA_VERSION` e bloqueia com instrução quando o banco estiver atrás.
-- [ ] Gerar tipos TypeScript do banco: `npx supabase gen types typescript --local > packages/core/src/db/database.types.ts`.
-- [ ] **Testes de RLS** (pgTAP via `supabase test db`, ou script Node com dois clientes):
-  - usuário A (família 1) não lê, não insere e não altera nada da família 2;
-  - qualquer membro edita lançamento de outro membro, mas `created_by` continua o original;
-  - transferência sem `to_member_id`, para si mesmo ou com categoria é recusada pela constraint;
-  - Realtime: um usuário de outra família não recebe eventos de `movements` desta;
-  - MEMBER não cria convite nem desativa membro (só OWNER/ADMIN);
-  - um usuário não lê nem aprova o `device_pairings` de outro; `revoke_device` não apaga
-    sessão de outro usuário;
-  - anon não lê nenhuma tabela, só `app_schema_version()`;
-  - convite expirado ou já usado é recusado, e o uso concorrente do mesmo convite falha em um dos lados;
-  - FK composta impede `movements.category_id` de outra família.
-- [ ] Rodar `EXPLAIN ANALYZE` das consultas principais com uns 50 mil lançamentos fake e
-  conferir que usam `movements_family_date_idx` e que o `is_family_member()` não vira gargalo
-  (a chamada com `(select auth.uid())` é cacheada por statement).
+- [x] Criar `supabase/` na raiz do repo (`supabase init`) e `package.json` raiz com a CLI do
+  Supabase como devDependency.
+- [x] Subir o stack local com Docker (`yarn db:start`): Postgres 17, Auth, PostgREST, Realtime,
+  Edge Runtime e Studio (http://127.0.0.1:54323).
+- [x] Mover os rascunhos para `supabase/migrations/`, nesta ordem:
+  - `20261107000001_schema.sql`: tabelas, tipos, índices e triggers
+  - `20261107000002_rls.sql`: RLS, helpers (`is_family_member`, `is_family_admin`,
+    `my_family_ids`) e RPCs de família
+  - `20261107000003_sync.sql`: colunas de sync, `sync_push` e `sync_pull` (Etapa 3)
+  - `20261107000004_device_link.sql`: pareamento por QR e aparelhos conectados (Etapa 5)
+  - `20261107000005_dashboard.sql`: totais do dashboard, como especificação de referência.
+    Veio depois do sync porque filtra `deleted_at`.
+  - `20261107000006_hardening.sql`: tira do `anon` e do `PUBLIC` os privilégios que o
+    Supabase concede por padrão
+- [x] Deixar as migrações idempotentes: `drop policy if exists` antes de cada policy e
+  inclusão condicional na publicação do Realtime.
+- [x] Mover a Edge Function para `supabase/functions/pair-device/` (`verify_jwt = false` no
+  `config.toml`) e servir com `yarn functions:serve`.
+- [x] Gerar `supabase/setup.sql` com `yarn db:bundle` (todas as migrações numa transação).
+  Validado: roda duas vezes seguidas sem erro e, sozinho num banco zerado, passa em todos os
+  testes.
+- [x] Gerar os tipos: `yarn db:types` → `packages/core/src/db/database.types.ts`.
+- [x] **Testes de RLS** em pgTAP (`yarn db:test`, 55 asserções em
+  `supabase/tests/database/rls.test.sql`):
+  - isolamento entre famílias (ler, inserir, alterar);
+  - qualquer membro edita lançamento de outro, `created_by` preservado e não forjável;
+  - exclusão física proibida (só soft delete);
+  - constraints de transferência e FKs compostas (categoria e membro de outra família);
+  - só OWNER/ADMIN cria convite, desativa membro e recebe convite no QR;
+  - membro desativado perde o acesso;
+  - convite válido, já usado e expirado;
+  - pareamento e `revoke_device` só do próprio usuário; `register_device` usa o `session_id`;
+  - `sync_push`/`sync_pull` presos à família do parâmetro, com whitelist de tabelas;
+  - anon sem privilégio em tabela, só com `app_schema_version()`.
+  Prova de que os testes pegam falha: com o RLS de `movements` desligado, 5 deles quebram.
+- [x] **Teste de ponta a ponta do QR** (`yarn db:test:e2e`, com `functions:serve` rodando):
+  cadastro, `create_device_link`, `scan` atômico, aprovação, `generateLink` + `verifyOtp`
+  com sessão própria do celular, `register_device` e `revoke_device`.
+- [x] `EXPLAIN ANALYZE` com 10 famílias × 50 mil lançamentos (ver resultados abaixo).
+- [ ] Teste de Realtime (outra família não recebe eventos): fica para a Etapa 3, que traz o
+  `supabase-js` e o canal Realtime.
+- [ ] Uso **concorrente** do mesmo convite: precisa de duas conexões; o `FOR UPDATE` +
+  `used_at` cobre o caso. Fica para a Etapa 5.
+- [x] Rodar o `setup.sql` num projeto Supabase **novo na nuvem** pelo SQL Editor: "Success",
+  sem ajustes (2026-11-07).
+
+## Resultados
+
+### Validações que estavam pendentes no plano
+
+| Item | Resultado |
+|---|---|
+| `generateLink` + `verifyOtp({ token_hash, type: 'email' })` | Funciona e cria uma sessão nova, diferente da do computador |
+| Claim `session_id` no JWT | Presente |
+| Apagar a linha em `auth.sessions` derruba o refresh | Sim; a sessão do computador continua válida |
+| `ON DELETE SET NULL (coluna)` | Funciona no Postgres 17 do Supabase |
+
+### Desempenho (500 mil lançamentos, 50 mil na família consultada)
+
+As policies usavam `is_family_member(family_id)`, chamada linha a linha. Trocadas por
+`family_id in (select public.my_family_ids())`, que o Postgres calcula uma vez por consulta:
+
+| Consulta | Antes | Depois |
+|---|---|---|
+| Lançamentos do mês (`movements_family_date_idx`) | 3,5 ms | 0,5 ms |
+| `dashboard_summary` | 249 ms | 40 ms |
+| `sync_pull` incremental sem mudanças | 1,4 ms | 2,5 ms |
+| `sync_pull` carga inicial (50 mil linhas) | 1.063 ms | ~700 ms |
+
+A carga inicial ainda é lenta porque monta um JSON com 50 mil linhas: a paginação do
+`sync_pull` entra na Etapa 3.
 
 ## Pontos de atenção
 
-- `ON DELETE SET NULL (coluna)` exige PG15+. O Supabase atual já está acima disso.
+- `ON DELETE SET NULL (coluna)` exige PG15+. O Supabase usa o 17.
+- Policy nova de membro: usar `family_id in (select public.my_family_ids())`, nunca
+  `is_family_member(family_id)`, que é avaliada linha a linha.
+- Toda tabela ou função nova em `public` precisa passar pelo `006_hardening.sql` (ou
+  repetir os `revoke` na própria migração).
 - `pgcrypto` fica no schema `extensions` no Supabase, por isso as funções o referenciam como
   `extensions.digest`.
 - Nunca usar `service_role` nos testes de RLS: o teste precisa passar pelo mesmo caminho do app.

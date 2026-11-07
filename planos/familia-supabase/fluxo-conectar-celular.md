@@ -20,8 +20,8 @@ etapas:
 > É implementada nas Etapas [[etapa-04-conexao-byo|4]]
 > (formato do QR), [[etapa-05-auth-familias|5]] (backend e regras),
 > [[etapa-06-desktop|6]] (tela no computador) e [[etapa-08-mobile|8]] (leitura no
-> celular). Rascunhos: [[sql/005_device_link.sql|sql/005_device_link.sql]] e
-> [[functions/pair-device/index.ts|functions/pair-device/index.ts]].
+> celular). Código: `supabase/migrations/20261107000004_device_link.sql` e
+> `supabase/functions/pair-device/index.ts`.
 
 ## Objetivo
 
