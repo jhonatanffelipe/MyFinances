@@ -1,13 +1,16 @@
 {
   "name": "myfinances",
   "productName": "MyFinances",
+  "description": "Controle financeiro da família: funciona offline e sincroniza com o seu próprio Supabase.",
+  "author": "Jhonatan Nascimento <jhonatanfnm@gmail.com>",
   "private": true,
-  "version": "1.0.0",
+  "version": "2.0.0",
   "type": "module",
   "main": "dist-electron/main.js",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build && electron-builder",
+    "build:win": "tsc && vite build && electron-builder --win --x64",
     "lint": "eslint . --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview"
   },
@@ -15,12 +18,11 @@
     "appId": "com.myfinances.desktop",
     "productName": "MyFinances",
     "directories": {
-      "output": "dist-electron"
+      "output": "release"
     },
     "files": [
       "dist/**",
-      "dist-electron/**",
-      "electron/**",
+      "dist-electron/*.js",
       "public/**"
     ],
     "extraMetadata": {

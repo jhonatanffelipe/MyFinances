@@ -133,10 +133,13 @@ yarn dev
 ```
 
 ### 5. Compilar para Produção (Gerar Instalador .exe)
-Cria o executável de distribuição e o instalador NSIS para Windows dentro de `dist-electron/`:
+Gera o instalador NSIS para Windows x64 (`MyFinances-Setup-<versão>.exe`) dentro de `release/`:
 ```bash
-yarn build
+yarn build:win
 ```
+Funciona também a partir do macOS (o banco local é sql.js/WASM, sem módulo nativo). Para juntar o `.exe` com o `setup.sql`, as migrações e o guia da release, rode `yarn release:assets` na raiz.
+
+Para instalar e configurar como usuário final, veja o [guia de instalação](../docs/guia-instalacao.md).
 
 ---
 

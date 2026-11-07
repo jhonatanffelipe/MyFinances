@@ -14,7 +14,8 @@
     "core:install": "yarn --cwd packages/core install",
     "core:test": "yarn --cwd packages/core test",
     "core:typecheck": "yarn --cwd packages/core typecheck",
-    "core:test:sync": "yarn --cwd packages/core test:sync"
+    "core:test:sync": "yarn --cwd packages/core test:sync",
+    "release:assets": "node scripts/prepare-release.mjs"
   },
   "devDependencies": {
     "supabase": "^2.0.0"
