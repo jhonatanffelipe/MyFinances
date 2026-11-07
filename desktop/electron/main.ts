@@ -1,9 +1,5 @@
 import { app, BrowserWindow, Menu } from 'electron';
-import { loadConfig } from './config.js';
-import { checkForExternalChanges, closeDatabase, initDatabase } from './database/index.js';
-import { checkDbLockNow } from './database/lock.js';
-import { onDbSyncEvent } from './database/syncEvents.js';
-import { IPC_CHANNELS } from '../src/interfaces/IElectronBridge.js';
+import { AppController } from './app/appController.js';
 import { registerAllIpcHandlers } from './ipc/index.js';
 import { applyDockIcon, createMainWindow, getMainWindow } from './window.js';
 
@@ -27,33 +23,20 @@ if (process.platform === 'darwin') {
   Menu.setApplicationMenu(null);
 }
 
-// Registra todos os canais IPC desacoplados
-registerAllIpcHandlers();
-
-// Repassa à interface os eventos de sincronização do banco (recarga, conflito, presença)
-onDbSyncEvent((event) => {
-  const win = getMainWindow();
-  if (win && !win.isDestroyed()) {
-    win.webContents.send(IPC_CHANNELS.DB_SYNC_EVENT, event);
-  }
-});
-
-// Ao voltar para o app, confere se o OneDrive trouxe uma versão nova do banco
-app.on('browser-window-focus', () => {
-  checkDbLockNow();
-  checkForExternalChanges();
-});
+// Conexão com o Supabase, sessão, banco local e sincronização vivem aqui no main.
+const controller = new AppController();
+registerAllIpcHandlers(controller);
 
 app.whenReady().then(async () => {
   applyDockIcon();
-
-  const initialConfig = loadConfig();
-  const targetDb = initialConfig.dbFilePath || initialConfig.dbFolder;
-  if (targetDb) {
-    await initDatabase(targetDb);
-  }
-
+  // safeStorage só funciona depois do "ready"; a janela abre na fase "loading"
+  // e recebe o estado assim que a sessão salva for carregada.
   createMainWindow();
+  try {
+    await controller.init();
+  } catch (err) {
+    console.error('[app] falha ao iniciar:', err);
+  }
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0 || !getMainWindow()) {
@@ -63,14 +46,17 @@ app.whenReady().then(async () => {
 });
 
 app.on('window-all-closed', () => {
-  // No macOS o app continua ativo sem janelas; o banco só é fechado ao sair
-  if (process.platform !== 'darwin') {
-    closeDatabase();
-    app.quit();
-  }
+  if (process.platform !== 'darwin') app.quit();
 });
 
-// Grava pendências e remove o arquivo de presença ao encerrar
-app.on('will-quit', () => {
-  closeDatabase();
+// Grava o banco local pendente antes de sair
+let disposed = false;
+app.on('before-quit', (event) => {
+  if (disposed) return;
+  event.preventDefault();
+  disposed = true;
+  controller
+    .dispose()
+    .catch((err) => console.error('[app] falha ao encerrar:', err))
+    .finally(() => app.quit());
 });

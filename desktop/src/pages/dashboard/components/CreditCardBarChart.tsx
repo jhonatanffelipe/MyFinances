@@ -3,7 +3,7 @@ import { Paper } from '@mui/material';
 
 interface CreditCardBarChartProps {
   data: Array<{
-    id: number;
+    id: string;
     label: string;
     value: number;
     color: string;

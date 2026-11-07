@@ -30,6 +30,8 @@ import {
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import dayjs from 'dayjs';
 import { Category, CreditCard, MovementFilters as FiltersType } from '../../../types/database';
+import { useAppState } from '../../../contexts/AppStateContext';
+import { MemberAvatar } from '../../../components/Members/MemberAvatar';
 
 interface MovementFiltersProps {
   filters: FiltersType;
@@ -49,6 +51,8 @@ export function MovementFilters({
   onOpenBulkDelete,
 }: MovementFiltersProps) {
   const navigate = useNavigate();
+  const { state } = useAppState();
+  const members = state.members;
 
   const [isFiltersVisible, setIsFiltersVisible] = React.useState<boolean>(() => {
     try {
@@ -74,6 +78,7 @@ export function MovementFilters({
     Boolean(filters.categoryId),
     Boolean(filters.type && filters.type !== 'ALL'),
     Boolean(filters.creditCardId !== undefined),
+    Boolean(filters.memberId),
   ].filter(Boolean).length;
 
   const getBaseMonthDate = (): Date => {
@@ -125,6 +130,7 @@ export function MovementFilters({
       endDate: '',
       categoryId: undefined,
       creditCardId: undefined,
+      memberId: undefined,
       type: 'ALL',
       search: '',
       excludeSearch: '',
@@ -229,7 +235,7 @@ export function MovementFilters({
       <Collapse in={isFiltersVisible}>
         <div className="space-y-4 pt-1">
           {/* Filter Fields Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 pt-1 border-t border-slate-100">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 pt-1 border-t border-slate-100">
         {/* De */}
         <DatePicker
           label="De"
@@ -279,7 +285,7 @@ export function MovementFilters({
             onChange={(e) =>
               onFilterChange({
                 ...filters,
-                categoryId: e.target.value !== '' ? Number(e.target.value) : undefined,
+                categoryId: e.target.value !== '' ? String(e.target.value) : undefined,
               })
             }
             className="rounded-xl text-xs"
@@ -340,6 +346,31 @@ export function MovementFilters({
             <MenuItem value="ALL" className="text-xs">Todos os tipos</MenuItem>
             <MenuItem value="INCOME" className="text-xs">Entradas</MenuItem>
             <MenuItem value="EXPENSE" className="text-xs">Saídas</MenuItem>
+            <MenuItem value="TRANSFER" className="text-xs">Transferências</MenuItem>
+          </Select>
+        </FormControl>
+
+        {/* Membro */}
+        <FormControl size="small" fullWidth>
+          <InputLabel className="text-xs">Membro</InputLabel>
+          <Select
+            value={filters.memberId ?? ''}
+            label="Membro"
+            onChange={(e) =>
+              onFilterChange({ ...filters, memberId: e.target.value !== '' ? String(e.target.value) : undefined })
+            }
+            className="rounded-xl text-xs"
+          >
+            <MenuItem value="" className="text-xs">Toda a família</MenuItem>
+            {members.map((m) => (
+              <MenuItem key={m.user_id} value={m.user_id} className="text-xs">
+                <span className="flex items-center gap-2">
+                  <MemberAvatar name={m.name} avatarUrl={m.avatar_url} size={18} />
+                  {m.name}
+                  {!m.active && <span className="text-[10px] text-amber-600">(inativo)</span>}
+                </span>
+              </MenuItem>
+            ))}
           </Select>
         </FormControl>
 
@@ -356,7 +387,7 @@ export function MovementFilters({
               } else if (val === 'none' || val === 'all_ungrouped') {
                 onFilterChange({ ...filters, creditCardId: val });
               } else {
-                onFilterChange({ ...filters, creditCardId: Number(val) });
+                onFilterChange({ ...filters, creditCardId: String(val) });
               }
             }}
             className="rounded-xl text-xs"

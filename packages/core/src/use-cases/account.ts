@@ -116,6 +116,32 @@ export class AccountSession {
     return { user, families, activeFamilyId: active };
   }
 
+  /**
+   * Atualiza a lista de famílias com o servidor sem zerar a sessão: o app abre com o
+   * cache local (`resume({ online: false })`) e chama isto em segundo plano. Se a família
+   * ativa deixou de existir para o usuário (saiu/foi desativado), passa para a primeira.
+   */
+  async refreshFamilies(options: { timeoutMs?: number } = {}): Promise<AccountState | null> {
+    const user = await this.auth.currentUser();
+    if (!user) return null;
+    const remote = await withTimeout(this.families.listFamilies(), options.timeoutMs ?? 15_000);
+    await this.cacheFamilies(remote);
+    const ids = new Set(remote.map((f) => f.id));
+    const families = (await this.familyRepo.listFamilies()).filter((f) => ids.has(f.id));
+    let active: Uuid | null = null;
+    try {
+      active = this.session.current().familyId;
+    } catch {
+      active = null;
+    }
+    if (!active || !ids.has(active)) {
+      active = families[0]?.id ?? null;
+      this.session.set({ userId: user.id, familyId: active ?? undefined });
+      if (active) await this.activeFamily.set(user.id, active);
+    }
+    return { user, families, activeFamilyId: active };
+  }
+
   async selectFamily(familyId: Uuid): Promise<void> {
     const user = await this.auth.currentUser();
     if (!user) throw new AppError('NOT_AUTHENTICATED', 'Faça login para continuar');

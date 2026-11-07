@@ -1,20 +1,22 @@
 export type TransactionType = 'INCOME' | 'EXPENSE';
+/** Lançamentos aceitam também transferência entre membros da família. */
+export type MovementType = TransactionType | 'TRANSFER';
+/** ids são uuid gerados no aparelho (v2). */
+export type Uuid = string;
 
 export type FixedExpenseRecurrence = 'MONTHLY' | 'BIMONTHLY' | 'QUARTERLY' | 'SEMIANNUAL' | 'ANNUAL';
 
 export interface AppUser {
-  id: number;
+  id: Uuid;
   name: string;
   email?: string;
-  role?: string;
-  phone?: string;
-  avatar?: string;
-  last_login?: string;
-  created_at?: string;
+  phone?: string | null;
+  avatar?: string | null;
 }
 
 export interface CreditCard {
-  id: number;
+  id: Uuid;
+  owner_id?: Uuid | null;
   description: string;
   color: string;
   due_day: number; // 1-31
@@ -23,7 +25,7 @@ export interface CreditCard {
 }
 
 export interface Category {
-  id: number;
+  id: Uuid;
   name: string;
   description?: string;
   type: TransactionType;
@@ -36,18 +38,26 @@ export interface Category {
 }
 
 export interface Movement {
-  id: number;
+  id: Uuid;
+  /** De quem é o lançamento (em transferência: quem envia). */
+  member_id?: Uuid;
+  member_name?: string | null;
+  /** Só em transferência: quem recebe. */
+  to_member_id?: Uuid | null;
+  to_member_name?: string | null;
+  /** Quem digitou. */
+  created_by?: Uuid;
   description: string;
   amount: number;
   date: string; // YYYY-MM-DD
-  type: TransactionType;
-  category_id: number;
+  type: MovementType;
+  category_id: Uuid | null;
   category_name?: string;
   category_color?: string;
-  credit_card_id?: number | null;
+  credit_card_id?: Uuid | null;
   credit_card_name?: string;
   credit_card_color?: string;
-  notes?: string;
+  notes?: string | null;
   created_at?: string;
   isGroupedCard?: boolean;
   /** Identificador único da fatura agrupada: `${cardId}_${YYYY-MM}`. */
@@ -57,15 +67,17 @@ export interface Movement {
 }
 
 export interface FixedExpense {
-  id: number;
+  id: Uuid;
+  /** Responsável (opcional). */
+  member_id?: Uuid | null;
   description: string;
   amount: number;
   /** EXPENSE = despesa fixa; INCOME = receita fixa. */
   type: TransactionType;
-  category_id: number;
+  category_id: Uuid | null;
   category_name?: string;
   category_color?: string;
-  credit_card_id?: number | null;
+  credit_card_id?: Uuid | null;
   credit_card_name?: string;
   credit_card_color?: string;
   recurrence: FixedExpenseRecurrence;
@@ -73,7 +85,7 @@ export interface FixedExpense {
   start_date: string; // YYYY-MM-DD
   end_date?: string | null; // YYYY-MM-DD (opcional)
   active: number; // 1 | 0
-  notes?: string;
+  notes?: string | null;
   /** 1 quando já existe baixa registrada para o mês de referência. */
   paid?: number;
   created_at?: string;
@@ -82,9 +94,12 @@ export interface FixedExpense {
 export interface MovementFilters {
   startDate?: string;
   endDate?: string;
-  categoryId?: number;
-  creditCardId?: number | string;
-  type?: TransactionType | 'ALL';
+  categoryId?: Uuid;
+  /** uuid do cartão, 'none' (sem cartão) ou 'all_ungrouped'. */
+  creditCardId?: Uuid;
+  /** Só lançamentos deste membro (inclui transferências que ele envia ou recebe). */
+  memberId?: Uuid;
+  type?: MovementType | 'ALL';
   search?: string;
   excludeSearch?: string;
 }
@@ -99,17 +114,18 @@ export interface DashboardData {
   expenseTrend: number;
   monthlyHistory: Array<{
     month: string;
+    yearMonth?: string;
     income: number;
     expense: number;
   }>;
   expensesByCategory: Array<{
-    id: number;
+    id: Uuid;
     label: string;
     value: number;
     color: string;
   }>;
   expensesByCard: Array<{
-    id: number;
+    id: Uuid;
     label: string;
     value: number;
     color: string;
@@ -122,8 +138,3 @@ export interface DashboardData {
   }>;
 }
 
-export interface AuthResult {
-  success: boolean;
-  user?: AppUser;
-  error?: string;
-}

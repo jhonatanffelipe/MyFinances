@@ -88,6 +88,7 @@ export class SyncEngine {
   private readonly opts: Required<Omit<SyncEngineOptions, 'scheduler'>>;
   private readonly scheduler: Scheduler;
   private readonly listeners = new Set<(status: SyncStatus) => void>();
+  private readonly remoteListeners = new Set<(tables: SyncedTable[]) => void>();
   private status: SyncStatus = {
     phase: 'idle',
     pending: 0,
@@ -181,6 +182,17 @@ export class SyncEngine {
     listener(this.status);
     return () => {
       this.listeners.delete(listener);
+    };
+  }
+
+  /**
+   * Avisa quando o pull trouxe dados de OUTROS aparelhos (a UI recarrega a tela).
+   * Diferente de `store.onChange`, não dispara nas gravações locais.
+   */
+  onRemoteChange(listener: (tables: SyncedTable[]) => void): () => void {
+    this.remoteListeners.add(listener);
+    return () => {
+      this.remoteListeners.delete(listener);
     };
   }
 
@@ -388,7 +400,16 @@ export class SyncEngine {
        ON CONFLICT (family_id) DO UPDATE SET cursor = excluded.cursor, last_pull_at = excluded.last_pull_at`,
       [familyId, last.cursor, this.store.clock.now()],
     );
-    if (touched.size > 0) this.store.emit([...touched]);
+    if (touched.size > 0) {
+      this.store.emit([...touched]);
+      for (const l of this.remoteListeners) {
+        try {
+          l([...touched]);
+        } catch {
+          // ouvinte com erro não derruba o sync
+        }
+      }
+    }
     return applied;
   }
 

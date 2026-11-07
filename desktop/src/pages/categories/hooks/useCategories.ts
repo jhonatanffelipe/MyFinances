@@ -119,7 +119,7 @@ export function useCategories() {
     }
   };
 
-  const handleDeleteCategory = async (id: number) => {
+  const handleDeleteCategory = async (id: string) => {
     if (
       !window.confirm(
         'Tem certeza que deseja excluir esta categoria? As movimentações ficarão sem categoria.'

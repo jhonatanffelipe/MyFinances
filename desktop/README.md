@@ -4,9 +4,9 @@
 
 ![MyFinances Logo](public/icons/icon.png)
 
-### **Controle Financeiro Pessoal Inteligente, Seguro e 100% Offline**
+### **Controle Financeiro da Família: funciona offline e sincroniza com o seu próprio Supabase**
 
-*Construído com Electron, React, TypeScript, Material-UI, Tailwind CSS e SQLite (WASM).*
+*Construído com Electron, React, TypeScript, Material-UI, Tailwind CSS, SQLite (WASM) e Supabase.*
 
 [![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://reactjs.org/)
@@ -21,12 +21,12 @@
 
 ## 📌 Sobre o Projeto
 
-O **MyFinances** é um aplicativo desktop moderno para gestão de finanças pessoais desenvolvido com foco em **privacidade absoluta, usabilidade refinada e desempenho rápido**.
+O **MyFinances** é um aplicativo desktop para as finanças da **família**, com foco em **privacidade, uso offline e desempenho**.
 
-Diferente de serviços convencionais baseados em nuvem onde seus dados financeiros ficam expostos em servidores de terceiros, o **MyFinances opera de forma 100% local**:
-- Você escolhe a pasta onde seu banco de dados (`db_myfinances.sqlite`) será armazenado (disco local, pen drive criptografado, OneDrive, Google Drive, etc.).
-- Acesso protegido por senha local criptografada com algoritmo seguro (`scrypt`).
-- Total fidelidade aos layouts e design system do Figma (tema elegante com Verde Esmeralda `#10b981` e Dark Blue/Slate).
+- **Família como unidade de dados:** vários membros lançam na mesma família e o dashboard soma todos. Cada lançamento tem "de quem" é, e transferências entre membros (mesada, repasse) não inflam receita nem despesa da família.
+- **Offline-first:** o app lê e grava sempre num **SQLite local** (pasta interna do app, uma por conta). Sem internet, tudo continua funcionando; as alterações ficam na fila e sobem quando a rede volta.
+- **Seu próprio Supabase (BYO):** o app não traz URL nem chave embutidas. Na primeira execução você informa a *Project URL* e a *Publishable key* do **seu** projeto Supabase. Os dados ficam no seu projeto; o RLS do Postgres isola as famílias.
+- **Celular por QR:** conecte o app Android lendo um QR no computador, sem digitar senha.
 
 ---
 
@@ -64,12 +64,18 @@ Diferente de serviços convencionais baseados em nuvem onde seus dados financeir
 - Configuração do dia de vencimento da fatura.
 - Acompanhamento automático de faturas e histórico de despesas por cartão.
 
-### 6. 🛡️ Segurança e Autenticação Local
-- Escolha da pasta do banco de dados na primeira execução.
-- Cadastro e login protegidos com hash criptográfico `scrypt`.
-- Banco de dados em arquivo local único (`db_myfinances.sqlite`) via **`sql.js` (WebAssembly)**, garantindo compatibilidade multiplataforma sem dependências de compilação C++ nativa (`node-gyp`).
+### 6. 👨‍👩‍👧 Família, membros e aparelhos
+- Conta no Supabase Auth (e-mail e senha, "esqueci a senha").
+- Criar família, convidar por código/QR, desativar e reativar membros, participar de várias famílias (seletor na barra lateral).
+- **Conectar celular** por QR ("Sou eu" ou "Sou outra pessoa") e lista de **aparelhos conectados**, com "Desconectar".
+- Indicador de sincronização (online/offline, pendentes, recusadas) com "Sincronizar agora".
 
-### 7. ⌨️ Inputs Mascarados e DatePickers Avançados
+### 7. 🛡️ Segurança
+- A *publishable key* é pública por design; quem protege os dados é o login e o **RLS** do Postgres. A chave secreta (*service_role*) nunca entra no app.
+- Conexão e sessão (refresh token) cifradas com o `safeStorage` do Electron (Keychain no macOS, DPAPI no Windows).
+- Rede, banco local e credenciais ficam só no **processo main**; o renderer fala apenas por IPC.
+
+### 8. ⌨️ Inputs Mascarados e DatePickers Avançados
 - **MUI DatePicker** em português do Brasil (`dayjs` / `pt-br`) integrado em todos os seletores de data.
 - **MaskedNumberField** baseado em `react-imask`:
   - Moeda no padrão brasileiro (`R$ 1.250,50`).
@@ -85,7 +91,9 @@ Diferente de serviços convencionais baseados em nuvem onde seus dados financeir
 - **Gráficos:** [@mui/x-charts](https://mui.com/x/react-charts/)
 - **Date Pickers:** [@mui/x-date-pickers](https://mui.com/x/react-date-pickers/) com [Dayjs](https://day.js.org/)
 - **Formulários & Validação:** [React Hook Form](https://react-hook-form.com/), [Yup](https://github.com/jquense/yup), [react-imask](https://imask.js.org/)
-- **Banco de Dados:** [sql.js (SQLite WASM)](https://sql.js.org/) com persistência atômica em disco
+- **Banco local:** [sql.js (SQLite WASM)](https://sql.js.org/) com persistência atômica em disco
+- **Servidor:** [Supabase](https://supabase.com/) (Postgres + RLS, Auth, Realtime) via `@supabase/supabase-js`
+- **Regras de negócio e sincronização:** pacote compartilhado `packages/core` (use cases, repositórios SQL, `SyncEngine`)
 - **Ícones:** [Lucide React](https://lucide.dev/), [MUI Icons](https://mui.com/material-ui/material-icons/)
 - **Empacotador:** [electron-builder](https://www.electron.build/)
 
@@ -109,13 +117,22 @@ cd MyFinances/desktop
 yarn install
 ```
 
-### 3. Executar em Modo de Desenvolvimento
+### 3. Subir um Supabase local (opcional, para desenvolvimento)
+Na raiz do repositório (precisa de Docker):
+```bash
+yarn db:start          # Supabase local: API em http://127.0.0.1:54321
+yarn functions:serve   # Edge Function pair-device ("Sou eu" no QR do celular)
+```
+Na tela **Conectar** do app, use a URL `http://127.0.0.1:54321` e a *Publishable key* mostrada por `supabase status`.
+Para um projeto real, o botão **Copiar script** da mesma tela copia o `supabase/setup.sql` para colar no SQL Editor.
+
+### 4. Executar em Modo de Desenvolvimento
 Inicia o Vite e abre a janela do aplicativo Electron com Hot Reload ativo:
 ```bash
 yarn dev
 ```
 
-### 4. Compilar para Produção (Gerar Instalador .exe)
+### 5. Compilar para Produção (Gerar Instalador .exe)
 Cria o executável de distribuição e o instalador NSIS para Windows dentro de `dist-electron/`:
 ```bash
 yarn build
@@ -126,28 +143,33 @@ yarn build
 ## 📂 Estrutura de Diretórios
 
 ```
-MyFinances/
-├── electron/                  # Código do processo principal do Electron
-│   ├── main.ts                # Inicialização da janela, menu e IPC handlers
-│   └── preload.ts             # Ponte de comunicação IPC segura (contextBridge)
+desktop/
+├── electron/                  # Processo main do Electron
+│   ├── main.ts                # Janela, menu e registro dos handlers IPC
+│   ├── preload.ts             # Ponte IPC (contextBridge) com erros tipados (code do AppError)
+│   ├── app/
+│   │   ├── appController.ts   # Conexão, sessão, banco local por usuário, sync e Realtime
+│   │   ├── localDatabase.ts   # SQLite (sql.js) em userData/data/<projeto>-<usuário>.sqlite
+│   │   └── networkMonitor.ts  # Online/offline para o SyncEngine
+│   ├── connection/            # SafeStorageKeyValueStore (conexão + sessão cifradas)
+│   └── ipc/                   # app.ipc.ts (conta, família, aparelhos, sync) e data.ipc.ts (cadastros)
 ├── public/                    # Ícones (.ico, .png) e assets estáticos
 ├── src/
-│   ├── components/            # Componentes reutilizáveis
-│   │   ├── Layout/            # Sidebar, Topbar e estrutura de páginas
-│   │   ├── MaskedField/       # Inputs com máscara monetária e numérica
-│   │   └── Table/             # Paginação server-side (TablePagination)
-│   ├── contexts/              # Contextos globais (AuthContext)
-│   ├── pages/                 # Telas e módulos do sistema
-│   │   ├── db-setup/          # Configuração de pasta, cadastro e login
-│   │   ├── dashboard/         # KPIs, gráficos comparativos e de cartões
-│   │   ├── movements/         # Extrato, filtros e modal de transações
-│   │   ├── fixed-expenses/    # Despesas fixas e recorrentes
+│   ├── bridge.ts              # Monta window.electronAPI / window.appAPI a partir do preload
+│   ├── components/            # Layout (seletor de família, sync), Devices (QR), Members, Sync...
+│   ├── contexts/              # AppStateContext (fase, usuário, família, sync)
+│   ├── interfaces/            # Contratos IPC (IElectronBridge, AppBridge)
+│   ├── pages/
+│   │   ├── onboarding/        # Conectar ao Supabase, login/cadastro e criar/entrar na família
+│   │   ├── dashboard/         # KPIs e gráficos
+│   │   ├── movements/         # Extrato, filtros (membro), transferências e importação
+│   │   ├── fixed-entries/     # Despesas e receitas fixas
 │   │   ├── categories/        # Categorias e limites mensais
-│   │   └── credit-cards/      # Gestão de cartões de crédito
-│   ├── routes/                # Roteamento da aplicação (AppRoutes)
-│   ├── types/                 # Definições de tipos e interfaces do banco
-│   ├── App.tsx                # Provedores de tema MUI e localização pt-BR
-│   └── main.tsx               # Ponto de entrada do React
+│   │   ├── credit-cards/      # Cartões de crédito
+│   │   ├── members/           # Membros, convites e conectar celular
+│   │   └── profile/           # Perfil, senha, aparelhos e banco conectado
+│   ├── routes/                # Onboarding até "ready"; depois as rotas do app
+│   └── types/                 # Tipos do renderer (ids uuid)
 ├── package.json
 └── vite.config.ts
 ```

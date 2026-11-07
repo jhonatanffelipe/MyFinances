@@ -126,6 +126,21 @@ describe('conta', () => {
     assert.equal(state?.activeFamilyId, o.familyId);
   });
 
+  it('abre com o cache local e atualiza as famílias em segundo plano', async () => {
+    const o = await owner();
+    const d = await device({ storage: o.storage });
+    await d.core.store.write((ctx) =>
+      d.core.repos.families.upsertFamily(ctx, { id: o.familyId, name: 'Nome antigo', created_by: null, created_at: ctx.now() }),
+    );
+    const local = await d.account.session.resume({ online: false });
+    assert.equal(local?.activeFamilyId, o.familyId);
+    const refreshed = await d.account.session.refreshFamilies();
+    assert.equal(refreshed?.activeFamilyId, o.familyId);
+    assert.equal(refreshed?.families.find((f) => f.id === o.familyId)?.name, 'Família Teste');
+    // A sessão do core continua válida durante e depois da atualização
+    assert.equal(d.session.current().familyId, o.familyId);
+  });
+
   it('sair com pendências exige confirmação', async () => {
     const o = await owner();
     await o.core.movements.create.execute({ description: 'Pendente', amount: 1, date: '2026-10-01', type: 'EXPENSE' });

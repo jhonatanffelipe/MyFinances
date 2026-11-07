@@ -126,6 +126,8 @@ export interface BulkDeletePreview {
   totalExpense: number;
   totalIncome: number;
   fixedCount: number;
+  /** De quem são os lançamentos (todos editam tudo: a confirmação mostra o dono). */
+  members: Array<{ member_id: Uuid; name: string | null; count: number }>;
 }
 
 export interface MovementRepository {

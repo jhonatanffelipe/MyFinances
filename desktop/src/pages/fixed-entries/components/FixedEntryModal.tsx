@@ -19,6 +19,8 @@ import dayjs from 'dayjs';
 import { Category, CreditCard, FixedExpense } from '../../../types/database';
 import { fixedEntrySchema, FixedEntryFormData, FixedEntryCopy } from '../constants';
 import { MaskedNumberField } from '../../../components/MaskedField/MaskedNumberField';
+import { MemberSelect } from '../../../components/Members/MemberSelect';
+import { useAppState } from '../../../contexts/AppStateContext';
 
 interface FixedEntryModalProps {
   copy: FixedEntryCopy;
@@ -40,6 +42,7 @@ export function FixedEntryModal({
   onSubmit,
 }: FixedEntryModalProps) {
   const todayStr = new Date().toISOString().split('T')[0];
+  const { state } = useAppState();
 
   const emptyValues = {
     description: '',
@@ -47,8 +50,9 @@ export function FixedEntryModal({
     due_day: 10,
     start_date: todayStr,
     end_date: '',
-    category_id: '' as any,
-    credit_card_id: '' as any,
+    category_id: '',
+    credit_card_id: '',
+    member_id: state.user?.id ?? '',
     recurrence: 'MONTHLY',
     active: 1,
     notes: '',
@@ -73,8 +77,9 @@ export function FixedEntryModal({
         due_day: entry.due_day,
         start_date: entry.start_date,
         end_date: entry.end_date || '',
-        category_id: entry.category_id,
-        credit_card_id: entry.credit_card_id || ('' as any),
+        category_id: entry.category_id ?? '',
+        credit_card_id: entry.credit_card_id ?? '',
+        member_id: entry.member_id ?? '',
         recurrence: entry.recurrence || 'MONTHLY',
         active: entry.active,
         notes: entry.notes || '',
@@ -271,6 +276,18 @@ export function FixedEntryModal({
                 )}
               />
             </div>
+          </div>
+
+          {/* Responsável */}
+          <div>
+            <label className="text-xs font-semibold text-slate-700 block mb-1.5">De quem</label>
+            <Controller
+              name="member_id"
+              control={control}
+              render={({ field }) => (
+                <MemberSelect value={field.value ?? ''} onChange={field.onChange} emptyLabel="Ninguém em específico (família)" />
+              )}
+            />
           </div>
 
           {/* Cartão de crédito — apenas para despesas fixas */}

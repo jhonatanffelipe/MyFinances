@@ -24,6 +24,28 @@ import {
 } from 'lucide-react';
 import { Movement } from '../../../types/database';
 import TablePagination from '../../../components/Table/TablePagination';
+import { MemberAvatar } from '../../../components/Members/MemberAvatar';
+
+/** De quem é o lançamento; em transferência mostra "De → Para". */
+function MemberCell({ movement, compact }: { movement: Movement; compact?: boolean }) {
+  if (!movement.member_name) return <span className="text-xs text-slate-400">-</span>;
+  const size = compact ? 18 : 22;
+  return (
+    <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-700 min-w-0">
+      <MemberAvatar name={movement.member_name} size={size} />
+      <span className="truncate">{movement.member_name}</span>
+      {movement.type === 'TRANSFER' && movement.to_member_name && (
+        <>
+          <span className="text-slate-400">→</span>
+          <MemberAvatar name={movement.to_member_name} size={size} />
+          <span className="truncate">{movement.to_member_name}</span>
+        </>
+      )}
+    </span>
+  );
+}
+
+const amountSign = (m: Movement) => (m.type === 'INCOME' ? '+' : m.type === 'TRANSFER' ? '⇄' : '-');
 
 interface MovementTableProps {
   movements: Movement[];
@@ -42,10 +64,10 @@ interface MovementTableProps {
     orderDirection: 'asc' | 'desc'
   ) => Promise<void> | void;
   onEdit: (mov: Movement) => void;
-  onDelete: (id: number) => void;
-  onFilterCard?: (cardId: number) => void;
+  onDelete: (id: string) => void;
+  onFilterCard?: (cardId: string) => void;
   /** Exclui todos os lançamentos do cartão no mês (YYYY-MM) da fatura. */
-  onBulkDeleteCard?: (cardId: number, yearMonth: string) => void;
+  onBulkDeleteCard?: (cardId: string, yearMonth: string) => void;
 }
 
 export function MovementTable({
@@ -69,7 +91,7 @@ export function MovementTable({
   // Faturas expandidas, identificadas por cartão + mês (uma fatura por mês para cada cartão)
   const [expandedGroupKeys, setExpandedGroupKeys] = useState<Set<string>>(new Set());
 
-  const getGroupKey = (row: Movement) => row.groupKey ?? `${row.credit_card_id || 0}_${row.id}`;
+  const getGroupKey = (row: Movement) => row.groupKey ?? `${row.credit_card_id ?? 'none'}_${row.id}`;
 
   const toggleExpandCard = (groupKey: string) => {
     setExpandedGroupKeys((prev) => {
@@ -126,6 +148,9 @@ export function MovementTable({
               <TableCell width={150} className="font-bold text-xs text-slate-500 uppercase">
                 Data
               </TableCell>
+              <TableCell width={170} className="font-bold text-xs text-slate-500 uppercase">
+                Membro
+              </TableCell>
               <TableCell className="font-bold text-xs text-slate-500 uppercase">
                 Descrição
               </TableCell>
@@ -143,14 +168,14 @@ export function MovementTable({
           <TableBody>
             {movements.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-12 text-slate-400 text-sm">
+                <TableCell colSpan={7} className="text-center py-12 text-slate-400 text-sm">
                   Nenhuma movimentação encontrada para o período selecionado.
                 </TableCell>
               </TableRow>
             ) : (
               movements.map((row) => {
                 if (row.isGroupedCard) {
-                  const cardId = row.credit_card_id || 0;
+                  const cardId = row.credit_card_id ?? '';
                   const groupKey = getGroupKey(row);
                   const isExpanded = expandedGroupKeys.has(groupKey);
                   return (
@@ -197,6 +222,9 @@ export function MovementTable({
                           </div>
                         </TableCell>
                         <TableCell>
+                          <MemberCell movement={row} />
+                        </TableCell>
+                        <TableCell>
                           <div>
                             <div className="flex items-center gap-2 flex-wrap">
                               <p className="font-bold text-slate-800 text-sm">{row.description}</p>
@@ -241,7 +269,7 @@ export function MovementTable({
                       {/* Sanfona expandida de lançamentos do cartão */}
                       {isExpanded && (
                         <TableRow className="bg-slate-50/70 border-b border-slate-200">
-                          <TableCell colSpan={6} className="p-0">
+                          <TableCell colSpan={7} className="p-0">
                             <div className="p-3 pl-8 sm:pl-12 space-y-2.5 bg-gradient-to-b from-slate-50 to-slate-100/40">
                               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
                                 <div className="flex items-center gap-2">
@@ -275,6 +303,7 @@ export function MovementTable({
                                   <thead className="bg-slate-50 border-b border-slate-100 text-[10px] text-slate-500 uppercase font-semibold">
                                     <tr>
                                       <th className="py-1.5 px-3">Data</th>
+                                      <th className="py-1.5 px-3">Membro</th>
                                       <th className="py-1.5 px-3">Descrição</th>
                                       <th className="py-1.5 px-3">Categoria</th>
                                       <th className="py-1.5 px-3">Tipo</th>
@@ -287,6 +316,9 @@ export function MovementTable({
                                       <tr key={child.id} className="hover:bg-slate-50/80 transition-colors">
                                         <td className="py-2 px-3 font-mono text-slate-600">
                                           {formatDate(child.date)}
+                                        </td>
+                                        <td className="py-2 px-3">
+                                          <MemberCell movement={child} compact />
                                         </td>
                                         <td className="py-2 px-3 font-medium text-slate-800">
                                           {child.description}
@@ -337,7 +369,7 @@ export function MovementTable({
                                               : 'text-slate-800'
                                           }`}
                                         >
-                                          {child.type === 'INCOME' ? '+' : '-'}{' '}
+                                          {amountSign(child)}{' '}
                                           {formatCurrency(child.amount)}
                                         </td>
                                         <td className="py-2 px-3 text-center">
@@ -388,6 +420,9 @@ export function MovementTable({
                       {formatDate(row.date)}
                     </TableCell>
                     <TableCell>
+                      <MemberCell movement={row} />
+                    </TableCell>
+                    <TableCell>
                       <div>
                         <p className="font-semibold text-slate-800 text-sm">{row.description}</p>
                         {row.credit_card_name && (
@@ -419,6 +454,8 @@ export function MovementTable({
                           />
                           <span>{row.category_name}</span>
                         </span>
+                      ) : row.type === 'TRANSFER' ? (
+                        <span className="text-xs text-slate-400">—</span>
                       ) : (
                         <span className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 bg-slate-100 px-2.5 py-0.5 rounded-full border border-slate-200/60">
                           <span className="w-1.5 h-1.5 rounded-full bg-slate-400 shrink-0" />
@@ -431,6 +468,10 @@ export function MovementTable({
                         <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full">
                           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Entrada
                         </span>
+                      ) : row.type === 'TRANSFER' ? (
+                        <span className="inline-flex items-center gap-1 text-xs font-bold text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-full">
+                          <span className="w-1.5 h-1.5 rounded-full bg-blue-500" /> Transferência
+                        </span>
                       ) : (
                         <span className="inline-flex items-center gap-1 text-xs font-bold text-slate-600 bg-slate-100 px-2.5 py-0.5 rounded-full">
                           <span className="w-1.5 h-1.5 rounded-full bg-slate-400" /> Saída
@@ -439,10 +480,10 @@ export function MovementTable({
                     </TableCell>
                     <TableCell
                       className={`text-sm font-bold text-right font-mono ${
-                        row.type === 'INCOME' ? 'text-emerald-600' : 'text-slate-900'
+                        row.type === 'INCOME' ? 'text-emerald-600' : row.type === 'TRANSFER' ? 'text-blue-600' : 'text-slate-900'
                       }`}
                     >
-                      {row.type === 'INCOME' ? '+' : '-'} {formatCurrency(row.amount)}
+                      {amountSign(row)} {formatCurrency(row.amount)}
                     </TableCell>
                   </TableRow>
                 );

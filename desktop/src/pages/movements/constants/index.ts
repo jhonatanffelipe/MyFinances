@@ -8,16 +8,25 @@ export const movementSchema = yup.object().shape({
     .positive('O valor deve ser positivo')
     .required('Valor é obrigatório'),
   date: yup.string().required('Data é obrigatória'),
-  type: yup.string().oneOf(['INCOME', 'EXPENSE']).required('Tipo é obrigatório'),
+  type: yup.string().oneOf(['INCOME', 'EXPENSE', 'TRANSFER']).required('Tipo é obrigatório'),
+  /** De quem é o lançamento (em transferência: quem envia). Vazio = usuário logado. */
+  member_id: yup.string().optional(),
+  /** Só em transferência: quem recebe. */
+  to_member_id: yup
+    .string()
+    .when(['type', 'member_id'], ([type, memberId], schema) =>
+      type === 'TRANSFER'
+        ? schema
+            .required('Informe quem recebe')
+            .test('other-member', 'Escolha outro membro', (v) => !v || v !== memberId)
+        : schema.optional(),
+    ),
   category_id: yup
-    .number()
-    .typeError('Selecione uma categoria')
-    .required('Categoria é obrigatória'),
-  credit_card_id: yup
-    .number()
-    .transform((val) => (isNaN(val) || val === '' ? null : val))
-    .nullable()
-    .optional(),
+    .string()
+    .when('type', ([type], schema) =>
+      type === 'TRANSFER' ? schema.optional() : schema.required('Selecione uma categoria'),
+    ),
+  credit_card_id: yup.string().optional(),
   notes: yup.string().optional(),
 });
 

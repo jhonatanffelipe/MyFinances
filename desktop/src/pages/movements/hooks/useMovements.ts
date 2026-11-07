@@ -57,7 +57,7 @@ export function useMovements() {
   // Exclusão em lote de lançamentos de um cartão em um mês
   const [bulkDeleteState, setBulkDeleteState] = useState<{
     open: boolean;
-    cardId: number | null;
+    cardId: string | null;
     yearMonth: string;
   }>({ open: false, cardId: null, yearMonth: '' });
 
@@ -153,26 +153,22 @@ export function useMovements() {
   const handleSubmitMovement = async (formData: MovementFormData) => {
     try {
       if (!window.electronAPI) return;
+      const isTransfer = formData.type === 'TRANSFER';
+      const payload = {
+        description: formData.description,
+        amount: Number(formData.amount),
+        date: formData.date,
+        type: formData.type as Movement['type'],
+        member_id: formData.member_id || undefined,
+        to_member_id: isTransfer ? formData.to_member_id || null : null,
+        category_id: isTransfer ? null : formData.category_id || null,
+        credit_card_id: isTransfer ? null : formData.credit_card_id || null,
+        notes: formData.notes,
+      };
       if (selectedMovement) {
-        await window.electronAPI.updateMovement(selectedMovement.id, {
-          description: formData.description,
-          amount: Number(formData.amount),
-          date: formData.date,
-          type: formData.type as any,
-          category_id: Number(formData.category_id),
-          credit_card_id: formData.credit_card_id ? Number(formData.credit_card_id) : null,
-          notes: formData.notes,
-        });
+        await window.electronAPI.updateMovement(selectedMovement.id, payload);
       } else {
-        await window.electronAPI.createMovement({
-          description: formData.description,
-          amount: Number(formData.amount),
-          date: formData.date,
-          type: formData.type as any,
-          category_id: Number(formData.category_id),
-          credit_card_id: formData.credit_card_id ? Number(formData.credit_card_id) : null,
-          notes: formData.notes,
-        });
+        await window.electronAPI.createMovement(payload);
       }
       handleCloseModal();
       await fetchMovements(currentPage, perPage, orderField, orderDirection, filters);
@@ -181,28 +177,26 @@ export function useMovements() {
     }
   };
 
-  const handleDeleteMovement = async (id: number) => {
-    if (!window.confirm('Tem certeza que deseja excluir esta movimentação?')) {
-      return;
-    }
-    try {
-      if (window.electronAPI) {
-        await window.electronAPI.deleteMovement(id);
-        await fetchMovements(currentPage, perPage, orderField, orderDirection, filters);
-      }
-    } catch (err: any) {
-      setError(err.message || 'Erro ao excluir movimentação');
-    }
+  // Exclusão individual: confirmação mostra de quem é o lançamento (todos editam tudo)
+  const [movementToDelete, setMovementToDelete] = useState<Movement | null>(null);
+
+  const handleDeleteMovement = (id: string) => {
+    const all = movements.flatMap((m) => (m.isGroupedCard ? m.cardMovements ?? [] : [m]));
+    setMovementToDelete(all.find((m) => m.id === id) ?? null);
+  };
+
+  const handleConfirmDeleteMovement = async () => {
+    if (!movementToDelete || !window.electronAPI) return;
+    await window.electronAPI.deleteMovement(movementToDelete.id);
+    await fetchMovements(currentPage, perPage, orderField, orderDirection, filters);
   };
 
   /** Abre o modal de exclusão em lote; sem argumentos usa o cartão e o mês do filtro atual. */
-  const handleOpenBulkDelete = (cardId?: number | null, yearMonth?: string) => {
+  const handleOpenBulkDelete = (cardId?: string | null, yearMonth?: string) => {
     const filterCardId =
-      typeof filters.creditCardId === 'number'
+      filters.creditCardId && filters.creditCardId !== 'none' && filters.creditCardId !== 'all_ungrouped'
         ? filters.creditCardId
-        : typeof filters.creditCardId === 'string' && /^\d+$/.test(filters.creditCardId)
-          ? Number(filters.creditCardId)
-          : null;
+        : null;
     const filterMonth =
       filters.startDate && /^\d{4}-\d{2}/.test(filters.startDate) ? filters.startDate.substring(0, 7) : '';
     setBulkDeleteState({
@@ -216,7 +210,7 @@ export function useMovements() {
     setBulkDeleteState((prev) => ({ ...prev, open: false }));
   };
 
-  const handleConfirmBulkDelete = async (creditCardId: number, yearMonth: string) => {
+  const handleConfirmBulkDelete = async (creditCardId: string, yearMonth: string) => {
     if (!window.electronAPI) return;
     const res = await window.electronAPI.bulkDeleteCardMovements({ creditCardId, yearMonth });
     if (!res.success) {
@@ -257,6 +251,9 @@ export function useMovements() {
     handleCloseModal,
     handleSubmitMovement,
     handleDeleteMovement,
+    movementToDelete,
+    setMovementToDelete,
+    handleConfirmDeleteMovement,
     bulkDeleteState,
     handleOpenBulkDelete,
     handleCloseBulkDelete,

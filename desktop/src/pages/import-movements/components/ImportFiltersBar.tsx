@@ -31,8 +31,8 @@ import { StatusFilter } from '../types';
 
 interface ImportFiltersBarProps {
   creditCards: CreditCard[];
-  selectedCreditCardId: number | null;
-  onCreditCardChange: (id: number | null) => void;
+  selectedCreditCardId: string | null;
+  onCreditCardChange: (id: string | null) => void;
   invoiceDate: string;
   onInvoiceDateChange: (date: string) => void;
   filterText: string;
@@ -52,7 +52,7 @@ interface ImportFiltersBarProps {
   onSelectAll: () => void;
   onDeselectAll: () => void;
   onDeselectDuplicates: () => void;
-  onBulkChangeCategory: (categoryId: number | null) => void;
+  onBulkChangeCategory: (categoryId: string | null) => void;
 }
 
 export function ImportFiltersBar({
@@ -90,7 +90,7 @@ export function ImportFiltersBar({
     setCategoryMenuAnchor(null);
   };
 
-  const handleSelectBulkCategory = (catId: number | null) => {
+  const handleSelectBulkCategory = (catId: string | null) => {
     onBulkChangeCategory(catId);
     handleCloseCategoryMenu();
   };
@@ -111,7 +111,7 @@ export function ImportFiltersBar({
               labelId="credit-card-select-label"
               value={selectedCreditCardId ?? ''}
               label="Cartão de Crédito de Origem"
-              onChange={(e) => onCreditCardChange(e.target.value ? Number(e.target.value) : null)}
+              onChange={(e) => onCreditCardChange(e.target.value ? String(e.target.value) : null)}
               className="rounded-xl text-xs bg-slate-50/60"
               startAdornment={
                 <InputAdornment position="start">

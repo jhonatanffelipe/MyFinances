@@ -38,7 +38,7 @@ interface CreditCardTableProps {
   ) => Promise<void> | void;
   handleSearchChange: (value: string) => void;
   onEdit: (card: CreditCard) => void;
-  onDelete: (id: number) => void;
+  onDelete: (id: string) => void;
 }
 
 export function CreditCardTable({

@@ -121,9 +121,9 @@ export function useFixedEntries(type: TransactionType = 'EXPENSE') {
         description: formData.description,
         amount: Number(formData.amount),
         type,
-        category_id: Number(formData.category_id),
-        credit_card_id:
-          copy.showCreditCard && formData.credit_card_id ? Number(formData.credit_card_id) : null,
+        category_id: formData.category_id,
+        credit_card_id: copy.showCreditCard && formData.credit_card_id ? formData.credit_card_id : null,
+        member_id: formData.member_id || null,
         recurrence: (formData.recurrence || 'MONTHLY') as any,
         due_day: Number(formData.due_day),
         start_date: formData.start_date,
@@ -144,7 +144,7 @@ export function useFixedEntries(type: TransactionType = 'EXPENSE') {
     }
   };
 
-  const handleDeleteEntry = async (id: number) => {
+  const handleDeleteEntry = async (id: string) => {
     if (!window.confirm(copy.deleteConfirm)) return;
     try {
       if (window.electronAPI) {

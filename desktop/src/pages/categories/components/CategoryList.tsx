@@ -40,7 +40,7 @@ interface CategoryListProps {
   handleSearchChange: (value: string) => void;
   onTypeFilterChange?: (type: 'ALL' | 'INCOME' | 'EXPENSE') => void;
   onEdit: (cat: Category) => void;
-  onDelete: (id: number) => void;
+  onDelete: (id: string) => void;
 }
 
 export function CategoryList({

@@ -25,6 +25,8 @@ import dayjs from 'dayjs';
 import { Category, CreditCard, Movement } from '../../../types/database';
 import { movementSchema, MovementFormData } from '../constants';
 import { MaskedNumberField } from '../../../components/MaskedField/MaskedNumberField';
+import { MemberSelect } from '../../../components/Members/MemberSelect';
+import { useAppState } from '../../../contexts/AppStateContext';
 
 interface MovementModalProps {
   open: boolean;
@@ -43,6 +45,19 @@ export function MovementModal({
   onClose,
   onSubmit,
 }: MovementModalProps) {
+  const { state } = useAppState();
+  const currentUserId = state.user?.id ?? '';
+  const emptyForm = (): MovementFormData => ({
+    description: '',
+    amount: '' as any,
+    date: new Date().toISOString().split('T')[0],
+    type: 'EXPENSE',
+    member_id: currentUserId,
+    to_member_id: '',
+    category_id: '',
+    credit_card_id: '',
+    notes: '',
+  });
   const {
     register,
     handleSubmit,
@@ -53,18 +68,12 @@ export function MovementModal({
     formState: { errors, isSubmitting },
   } = useForm<MovementFormData>({
     resolver: yupResolver(movementSchema) as any,
-    defaultValues: {
-      description: '',
-      amount: '' as any,
-      date: new Date().toISOString().split('T')[0],
-      type: 'EXPENSE',
-      category_id: '' as any,
-      credit_card_id: '' as any,
-      notes: '',
-    },
+    defaultValues: emptyForm(),
   });
 
   const selectedType = watch('type');
+  const selectedMember = watch('member_id');
+  const isTransfer = selectedType === 'TRANSFER';
 
   useEffect(() => {
     if (movement) {
@@ -73,22 +82,17 @@ export function MovementModal({
         amount: movement.amount,
         date: movement.date,
         type: movement.type,
-        category_id: movement.category_id,
-        credit_card_id: movement.credit_card_id || ('' as any),
+        member_id: movement.member_id ?? currentUserId,
+        to_member_id: movement.to_member_id ?? '',
+        category_id: movement.category_id ?? '',
+        credit_card_id: movement.credit_card_id ?? '',
         notes: movement.notes || '',
       });
     } else {
-      reset({
-        description: '',
-        amount: '' as any,
-        date: new Date().toISOString().split('T')[0],
-        type: 'EXPENSE',
-        category_id: '' as any,
-        credit_card_id: '' as any,
-        notes: '',
-      });
+      reset(emptyForm());
     }
-  }, [movement, open, reset]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [movement, open, reset, currentUserId]);
 
   const availableCategories = categories.filter((c) => c.type === selectedType);
 
@@ -106,7 +110,7 @@ export function MovementModal({
             {movement ? 'Editar movimentação' : 'Nova transação'}
           </DialogTitle>
           <p className="text-xs text-slate-500 mt-1">
-            Lance uma nova receita ou despesa em sua carteira.
+            Lance uma receita, despesa ou transferência entre membros da família.
           </p>
         </div>
         <IconButton size="small" onClick={onClose} className="text-slate-400 hover:text-slate-700">
@@ -130,7 +134,9 @@ export function MovementModal({
                   {...field}
                   onChange={(e) => {
                     field.onChange(e);
-                    setValue('category_id', '' as any);
+                    setValue('category_id', '');
+                    if (e.target.value === 'TRANSFER') setValue('credit_card_id', '');
+                    else setValue('to_member_id', '');
                   }}
                 >
                   <FormControlLabel
@@ -143,9 +149,47 @@ export function MovementModal({
                     control={<Radio color="success" />}
                     label={<span className="text-sm font-semibold text-slate-800">Receita</span>}
                   />
+                  <FormControlLabel
+                    value="TRANSFER"
+                    control={<Radio color="info" />}
+                    label={<span className="text-sm font-semibold text-slate-800">Transferência</span>}
+                  />
                 </RadioGroup>
               )}
             />
+          </div>
+
+          {/* De quem / Para quem */}
+          <div className={`grid grid-cols-1 gap-4 ${isTransfer ? 'sm:grid-cols-2' : ''}`}>
+            <div>
+              <label className="text-xs font-semibold text-slate-700 block mb-1.5">
+                {isTransfer ? 'De' : 'De quem'}
+              </label>
+              <Controller
+                name="member_id"
+                control={control}
+                render={({ field }) => (
+                  <MemberSelect value={field.value ?? ''} onChange={field.onChange} error={errors.member_id?.message} />
+                )}
+              />
+            </div>
+            {isTransfer && (
+              <div>
+                <label className="text-xs font-semibold text-slate-700 block mb-1.5">Para</label>
+                <Controller
+                  name="to_member_id"
+                  control={control}
+                  render={({ field }) => (
+                    <MemberSelect
+                      value={field.value ?? ''}
+                      onChange={field.onChange}
+                      excludeId={selectedMember || undefined}
+                      error={errors.to_member_id?.message}
+                    />
+                  )}
+                />
+              </div>
+            )}
           </div>
 
           {/* Descrição */}
@@ -211,6 +255,11 @@ export function MovementModal({
             </div>
           </div>
 
+          {isTransfer ? (
+            <p className="text-[11px] text-slate-500 bg-slate-50 border border-slate-100 rounded-xl p-2.5">
+              Transferência (mesada, repasse) não entra nos totais da família: sai de quem envia e entra para quem recebe.
+            </p>
+          ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* Categoria */}
             <div>
@@ -275,6 +324,7 @@ export function MovementModal({
               />
             </div>
           </div>
+          )}
 
           {/* Observações */}
           <div>

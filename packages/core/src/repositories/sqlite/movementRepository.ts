@@ -171,11 +171,21 @@ export class SqliteMovementRepository extends SqliteRepository implements Moveme
        FROM movements WHERE family_id = ? AND deleted_at IS NULL AND ${CARD_MONTH}`,
       [this.familyId(), cardId, yearMonth],
     );
+    const members = await this.db.all<{ member_id: Uuid; name: string | null; count: number }>(
+      `SELECT m.member_id, mb.name, COUNT(*) AS count
+       FROM movements m
+       LEFT JOIN members mb ON mb.family_id = m.family_id AND mb.user_id = m.member_id
+       WHERE m.family_id = ? AND m.deleted_at IS NULL AND m.credit_card_id = ? AND substr(m.date, 1, 7) = ?
+       GROUP BY m.member_id, mb.name
+       ORDER BY count DESC`,
+      [this.familyId(), cardId, yearMonth],
+    );
     return {
       count: Number(row?.count ?? 0),
       totalExpense: Number(row?.totalExpense ?? 0),
       totalIncome: Number(row?.totalIncome ?? 0),
       fixedCount: Number(row?.fixedCount ?? 0),
+      members: members.map((m) => ({ member_id: m.member_id, name: m.name, count: Number(m.count) })),
     };
   }
 

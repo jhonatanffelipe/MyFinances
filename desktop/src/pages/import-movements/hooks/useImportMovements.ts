@@ -52,7 +52,7 @@ export function useImportMovements(): UseImportMovementsReturn {
   const [items, setItems] = useState<ImportPreviewItem[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [creditCards, setCreditCards] = useState<CreditCard[]>([]);
-  const [selectedCreditCardId, setSelectedCreditCardId] = useState<number | null>(null);
+  const [selectedCreditCardId, setSelectedCreditCardId] = useState<string | null>(null);
   const [bankType, setBankType] = useState<ImportBankType>('AUTO');
   const [detectedBank, setDetectedBank] = useState<ImportBankType | null>(null);
   const [invoiceDate, setInvoiceDate] = useState<string>('');
@@ -106,7 +106,7 @@ export function useImportMovements(): UseImportMovementsReturn {
   }, [loadInitialData]);
 
   // Atualiza o creditCardId nos itens e recalcula a data de vencimento caso o cartão selecionado mude
-  const handleSetCreditCardId = (cardId: number | null) => {
+  const handleSetCreditCardId = (cardId: string | null) => {
     setSelectedCreditCardId(cardId);
     const card = creditCards.find((c) => c.id === cardId);
 
@@ -360,14 +360,14 @@ export function useImportMovements(): UseImportMovementsReturn {
   };
 
   // Altera categoria de um item individual
-  const handleChangeCategory = (id: string, categoryId: number | null) => {
+  const handleChangeCategory = (id: string, categoryId: string | null) => {
     setItems((prev) =>
       prev.map((item) => (item.id === id ? { ...item, categoryId } : item))
     );
   };
 
   // Aplica categoria em massa para TODOS os itens filtrados atualmente!
-  const handleBulkChangeCategory = (categoryId: number | null) => {
+  const handleBulkChangeCategory = (categoryId: string | null) => {
     const visibleIds = new Set(filteredItems.map((i) => i.id));
     setItems((prev) =>
       prev.map((item) =>
@@ -412,6 +412,7 @@ export function useImportMovements(): UseImportMovementsReturn {
         }
 
         return {
+          importHash: item.importHash,
           date: finalDate,
           description: item.description,
           amount: item.amount,
@@ -425,7 +426,8 @@ export function useImportMovements(): UseImportMovementsReturn {
       const res = await window.electronAPI.executeImportMovements({ items: payload });
       if (res.success) {
         setSuccessMessage(
-          `Importação concluída com sucesso! ${res.importedCount} movimentação(ões) foram adicionadas ao seu extrato.`
+          `Importação concluída com sucesso! ${res.importedCount} movimentação(ões) foram adicionadas ao seu extrato.` +
+            (res.skippedCount ? ` ${res.skippedCount} já tinham sido importadas antes e foram ignoradas.` : '')
         );
         return true;
       } else {

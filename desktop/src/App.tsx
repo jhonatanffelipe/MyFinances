@@ -4,7 +4,7 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import 'dayjs/locale/pt-br';
 import { AppRoutes } from './routes/AppRoutes';
-import { DbSyncProvider } from './contexts/DbSyncContext';
+import { AppStateProvider } from './contexts/AppStateContext';
 
 const theme = createTheme(
   {
@@ -105,9 +105,9 @@ export default function App() {
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="pt-br">
-        <DbSyncProvider>
+        <AppStateProvider>
           <AppRoutes />
-        </DbSyncProvider>
+        </AppStateProvider>
       </LocalizationProvider>
     </ThemeProvider>
   );

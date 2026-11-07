@@ -9,14 +9,15 @@ import {
   Tags,
   CreditCard as CreditCardIcon,
   LogOut,
-  Database,
   User,
-  MonitorSmartphone,
+  Users,
 } from 'lucide-react';
-import { Menu, MenuItem, ListItemIcon, ListItemText, CircularProgress } from '@mui/material';
-import { useAuth } from '../../contexts/AuthContext';
-import { useDbSync } from '../../contexts/DbSyncContext';
-import { AuthPage } from '../../pages/auth';
+import { Menu, MenuItem, ListItemIcon, ListItemText } from '@mui/material';
+import { useAppState } from '../../contexts/AppStateContext';
+import { PairingApprovalDialog } from '../Devices/PairingApprovalDialog';
+import { MemberAvatar } from '../Members/MemberAvatar';
+import { SyncIndicator } from '../Sync/SyncIndicator';
+import { FamilySwitcher } from './FamilySwitcher';
 
 interface NavItem {
   label: string;
@@ -31,6 +32,7 @@ const navItems: NavItem[] = [
   { label: 'Receitas Fixas', path: '/fixed-incomes', icon: CalendarPlus },
   { label: 'Categorias', path: '/categories', icon: Tags },
   { label: 'Cartões de Crédito', path: '/credit-cards', icon: CreditCardIcon },
+  { label: 'Membros', path: '/members', icon: Users },
 ];
 
 const PAGE_METADATA: Record<string, { title: string; subtitle: string }> = {
@@ -44,7 +46,11 @@ const PAGE_METADATA: Record<string, { title: string; subtitle: string }> = {
   },
   '/profile': {
     title: 'Meu perfil',
-    subtitle: 'Gerencie suas informações pessoais e credenciais de acesso.',
+    subtitle: 'Seus dados, senha, aparelhos conectados e a conexão com o banco.',
+  },
+  '/members': {
+    title: 'Membros',
+    subtitle: 'Quem participa da família, convites e acessos.',
   },
   '/movements': {
     title: 'Movimentações',
@@ -75,29 +81,14 @@ const PAGE_METADATA: Record<string, { title: string; subtitle: string }> = {
 export function AppLayout() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { dbPath, dbFile, user, loading, logout } = useAuth();
+  const { state, dataVersion, requestSignOut } = useAppState();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const { dataVersion, otherDevice } = useDbSync();
-
-  // Enquanto faz a checagem inicial de status E houver chance de usuário já logado
-  // (sessão em memória), exibe um spinner rápido. Caso contrário, exibe o fluxo de auth imediatamente.
-  if (loading && user) {
-    return (
-      <div className="h-screen w-screen flex items-center justify-center bg-slate-50">
-        <CircularProgress color="success" />
-      </div>
-    );
-  }
-
-  // Se nenhum banco foi configurado ou se o usuário não está autenticado, exibe a tela de Auth
-  if (!dbPath || !user) {
-    return <AuthPage />;
-  }
+  const user = state.user!;
 
   const currentPath = location.pathname;
   const pageMeta = PAGE_METADATA[currentPath] || {
     title: 'MyFinances',
-    subtitle: 'Controle Financeiro Pessoal',
+    subtitle: 'Controle Financeiro da Família',
   };
 
   const handleProfileClick = (event: React.MouseEvent<HTMLElement>) => {
@@ -110,22 +101,14 @@ export function AppLayout() {
 
   const handleLogout = () => {
     handleMenuClose();
-    logout();
+    requestSignOut().catch((err) => console.error('[logout]', err));
   };
-
-  const userInitials = (user.name || 'U')
-    .split(' ')
-    .filter(Boolean)
-    .map((w) => w[0])
-    .slice(0, 2)
-    .join('')
-    .toUpperCase();
 
   return (
     <div className="flex h-screen w-screen bg-slate-50/60 overflow-hidden font-sans">
       {/* Left Sidebar */}
       <aside className="w-64 bg-[#0b132b] text-slate-100 flex flex-col justify-between shadow-2xl z-10 flex-shrink-0 select-none">
-        <div>
+        <div className="min-h-0 overflow-y-auto">
           {/* Logo Header */}
           <div className="p-6 flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-emerald-500 flex items-center justify-center text-white shadow-md shadow-emerald-500/20 flex-shrink-0">
@@ -135,6 +118,8 @@ export function AppLayout() {
               MyFinances
             </h1>
           </div>
+
+          <FamilySwitcher />
 
           {/* Navigation Links */}
           <nav className="px-4 py-2 space-y-1.5">
@@ -167,7 +152,7 @@ export function AppLayout() {
           </nav>
         </div>
 
-        {/* Sidebar Bottom Area: User Profile Pill + SQLite Database Status */}
+        {/* Rodapé da barra lateral: perfil + sincronização */}
         <div className="p-4 space-y-2">
           {/* User profile pill matching reference UI */}
           <Link
@@ -176,17 +161,7 @@ export function AppLayout() {
             title="Meu perfil"
           >
             <div className="flex items-center gap-2.5 overflow-hidden">
-              {user.avatar ? (
-                <img
-                  src={user.avatar}
-                  alt={user.name}
-                  className="w-9 h-9 rounded-full object-cover ring-2 ring-emerald-500/30 flex-shrink-0"
-                />
-              ) : (
-                <div className="w-9 h-9 rounded-full bg-emerald-600 text-white font-bold flex items-center justify-center text-xs flex-shrink-0 shadow-sm">
-                  {userInitials}
-                </div>
-              )}
+              <MemberAvatar name={user.name} avatarUrl={user.avatar_url} size={36} className="ring-2 ring-emerald-500/30" />
               <div className="overflow-hidden">
                 <p className="text-xs font-bold text-white truncate group-hover:text-emerald-300 transition-colors">
                   {user.name}
@@ -209,21 +184,7 @@ export function AppLayout() {
             </button>
           </Link>
 
-          {/* SQLite Database Status Indicator (estático quando logado) */}
-          <div
-            title={`Banco de dados SQLite conectado.\nArquivo: ${dbFile || 'db_myfinances.sqlite'}\nCaminho: ${dbPath}`}
-            className="w-full text-left bg-slate-800/40 border border-slate-800/80 rounded-2xl p-3 select-none"
-          >
-            <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-sm shadow-emerald-500/50" />
-              <span className="text-xs font-bold text-white">
-                SQLite Ativo
-              </span>
-            </div>
-            <p className="text-[11px] font-mono text-slate-400 mt-1 truncate">
-              {dbFile || 'db_myfinances.sqlite'}
-            </p>
-          </div>
+          <SyncIndicator />
         </div>
       </aside>
 
@@ -248,17 +209,7 @@ export function AppLayout() {
             <span className="text-sm font-bold text-slate-800 hidden sm:inline">
               {user.name}
             </span>
-            {user.avatar ? (
-              <img
-                src={user.avatar}
-                alt={user.name}
-                className="w-10 h-10 rounded-full object-cover ring-2 ring-emerald-500/20 shadow-sm flex-shrink-0"
-              />
-            ) : (
-              <div className="w-10 h-10 rounded-full bg-emerald-600 text-white font-bold flex items-center justify-center text-sm shadow-sm ring-2 ring-emerald-500/20 select-none flex-shrink-0">
-                {userInitials}
-              </div>
-            )}
+            <MemberAvatar name={user.name} avatarUrl={user.avatar_url} size={40} className="ring-2 ring-emerald-500/20 shadow-sm" />
           </div>
 
           {/* Profile Popover Menu */}
@@ -273,17 +224,7 @@ export function AppLayout() {
             }}
           >
             <div className="px-4 py-2 border-b border-slate-100 flex items-center gap-2.5">
-              {user.avatar ? (
-                <img
-                  src={user.avatar}
-                  alt={user.name}
-                  className="w-8 h-8 rounded-full object-cover ring-1 ring-emerald-500/30 flex-shrink-0"
-                />
-              ) : (
-                <div className="w-8 h-8 rounded-full bg-emerald-600 text-white font-bold flex items-center justify-center text-xs flex-shrink-0">
-                  {userInitials}
-                </div>
-              )}
+              <MemberAvatar name={user.name} avatarUrl={user.avatar_url} size={32} />
               <div className="overflow-hidden">
                 <p className="text-xs font-semibold text-slate-400">Conectado como</p>
                 <p className="text-sm font-bold text-slate-800 truncate">{user.name}</p>
@@ -316,20 +257,16 @@ export function AppLayout() {
 
         {/* Scrollable Page Body */}
         <main className="flex-1 overflow-y-auto px-8 pb-8 pt-2">
-          {otherDevice && (
-            <div className="mb-4 flex items-start gap-2.5 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-800">
-              <MonitorSmartphone className="w-4 h-4 shrink-0 mt-0.5 text-amber-600" />
-              <span>
-                Este banco também está aberto em <strong>{otherDevice.deviceName}</strong>
-                {otherDevice.app === 'mobile' ? ' (celular)' : ''}. Evite editar nos dois dispositivos ao
-                mesmo tempo para não gerar conflito.
-              </span>
+          {!state.online && (
+            <div className="mb-4 rounded-2xl border border-slate-200 bg-slate-100/80 px-4 py-2.5 text-xs text-slate-600">
+              Você está offline. Pode continuar usando normalmente: as alterações ficam neste computador e sobem quando a internet voltar.
             </div>
           )}
-          {/* A key força recarregar a página quando o banco é atualizado por outro dispositivo */}
-          <Outlet key={dataVersion} />
+          {/* A key recarrega a página quando chegam dados de outro aparelho ou a família muda */}
+          <Outlet key={`${state.activeFamilyId}:${dataVersion}`} />
         </main>
       </div>
+      <PairingApprovalDialog />
     </div>
   );
 }

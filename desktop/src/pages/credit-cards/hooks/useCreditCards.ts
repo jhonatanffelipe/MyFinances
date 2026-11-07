@@ -105,7 +105,7 @@ export function useCreditCards() {
     }
   };
 
-  const handleDeleteCard = async (id: number) => {
+  const handleDeleteCard = async (id: string) => {
     if (
       !window.confirm(
         'Tem certeza que deseja excluir este cartão de crédito? Os lançamentos vinculados a ele continuarão no sistema.'

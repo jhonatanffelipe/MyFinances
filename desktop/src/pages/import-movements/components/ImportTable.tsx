@@ -24,7 +24,7 @@ interface ImportTableProps {
   onToggleSelect: (id: string) => void;
   onSelectAllVisible: () => void;
   onDeselectAllVisible: () => void;
-  onChangeCategory: (id: string, categoryId: number | null) => void;
+  onChangeCategory: (id: string, categoryId: string | null) => void;
   onChangeItemDate?: (id: string, newDate: string) => void;
 }
 
@@ -169,7 +169,7 @@ export function ImportTable({
                       <Select
                         value={item.categoryId ?? ''}
                         onChange={(e) =>
-                          onChangeCategory(item.id, e.target.value ? Number(e.target.value) : null)
+                          onChangeCategory(item.id, e.target.value ? String(e.target.value) : null)
                         }
                         displayEmpty
                         className="text-xs rounded-xl bg-slate-50/80 h-8"

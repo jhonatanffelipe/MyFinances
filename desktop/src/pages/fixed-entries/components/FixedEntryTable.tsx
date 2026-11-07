@@ -40,7 +40,7 @@ interface FixedEntryTableProps {
   ) => Promise<void> | void;
   handleSearchChange: (value: string) => void;
   onEdit: (entry: FixedExpense) => void;
-  onDelete: (id: number) => void;
+  onDelete: (id: string) => void;
 }
 
 export function FixedEntryTable({

@@ -9,8 +9,8 @@ export interface UseImportMovementsReturn {
   filteredItems: ImportPreviewItem[];
   categories: Category[];
   creditCards: CreditCard[];
-  selectedCreditCardId: number | null;
-  setSelectedCreditCardId: (id: number | null) => void;
+  selectedCreditCardId: string | null;
+  setSelectedCreditCardId: (id: string | null) => void;
   bankType: ImportBankType;
   setBankType: (type: ImportBankType) => void;
   detectedBank: ImportBankType | null;
@@ -46,9 +46,9 @@ export interface UseImportMovementsReturn {
   handleSelectAll: () => void;
   handleDeselectAll: () => void;
   handleDeselectDuplicates: () => void;
-  handleChangeCategory: (id: string, categoryId: number | null) => void;
+  handleChangeCategory: (id: string, categoryId: string | null) => void;
   handleChangeItemDate: (id: string, newDate: string) => void;
-  handleBulkChangeCategory: (categoryId: number | null) => void;
+  handleBulkChangeCategory: (categoryId: string | null) => void;
   handleResetFile: () => void;
   handleConfirmImport: () => Promise<boolean>;
 }

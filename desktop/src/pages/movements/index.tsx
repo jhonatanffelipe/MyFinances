@@ -5,6 +5,7 @@ import { MovementFilters } from './components/MovementFilters';
 import { MovementTable } from './components/MovementTable';
 import { MovementModal } from './components/MovementModal';
 import { BulkDeleteCardModal } from './components/BulkDeleteCardModal';
+import { ConfirmDialog } from '../../components/ConfirmDialog';
 
 export function MovementsPage() {
   const {
@@ -35,6 +36,9 @@ export function MovementsPage() {
     handleCloseModal,
     handleSubmitMovement,
     handleDeleteMovement,
+    movementToDelete,
+    setMovementToDelete,
+    handleConfirmDeleteMovement,
     bulkDeleteState,
     handleOpenBulkDelete,
     handleCloseBulkDelete,
@@ -95,6 +99,32 @@ export function MovementsPage() {
         onClose={handleCloseModal}
         onSubmit={handleSubmitMovement}
       />
+
+      {/* Exclusão individual: mostra de quem é o lançamento */}
+      <ConfirmDialog
+        open={!!movementToDelete}
+        title="Excluir lançamento?"
+        confirmLabel="Excluir"
+        danger
+        warning="Some para todos os membros da família. Esta ação não pode ser desfeita."
+        onClose={() => setMovementToDelete(null)}
+        onConfirm={handleConfirmDeleteMovement}
+      >
+        {movementToDelete && (
+          <p>
+            <strong className="text-slate-900">{movementToDelete.description}</strong> ·{' '}
+            {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(movementToDelete.amount)}
+            <br />
+            De <strong className="text-slate-900">{movementToDelete.member_name ?? 'membro desconhecido'}</strong>
+            {movementToDelete.type === 'TRANSFER' && movementToDelete.to_member_name && (
+              <>
+                {' '}para <strong className="text-slate-900">{movementToDelete.to_member_name}</strong>
+              </>
+            )}
+            .
+          </p>
+        )}
+      </ConfirmDialog>
 
       {/* Exclusão em lote por cartão/mês */}
       <BulkDeleteCardModal

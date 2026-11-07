@@ -4,7 +4,7 @@ import { Paper } from '@mui/material';
 
 interface CategoryPieChartProps {
   data: Array<{
-    id: number;
+    id: string;
     label: string;
     value: number;
     color: string;

@@ -22,12 +22,12 @@ interface BulkDeleteCardModalProps {
   open: boolean;
   creditCards: CreditCard[];
   /** Cartão pré-selecionado ao abrir (ex.: a partir da linha da fatura). */
-  initialCardId?: number | null;
+  initialCardId?: string | null;
   /** Mês pré-selecionado no formato YYYY-MM. */
   initialYearMonth?: string;
   onClose: () => void;
   /** Executa a exclusão; deve resolver após recarregar a listagem. */
-  onConfirm: (creditCardId: number, yearMonth: string) => Promise<void>;
+  onConfirm: (creditCardId: string, yearMonth: string) => Promise<void>;
 }
 
 const formatCurrency = (val: number) =>
@@ -41,7 +41,7 @@ export function BulkDeleteCardModal({
   onClose,
   onConfirm,
 }: BulkDeleteCardModalProps) {
-  const [cardId, setCardId] = useState<number | ''>('');
+  const [cardId, setCardId] = useState<string>('');
   const [yearMonth, setYearMonth] = useState<string>(dayjs().format('YYYY-MM'));
   const [preview, setPreview] = useState<BulkDeleteCardPreview | null>(null);
   const [loadingPreview, setLoadingPreview] = useState(false);
@@ -65,7 +65,7 @@ export function BulkDeleteCardModal({
     let cancelled = false;
     setLoadingPreview(true);
     window.electronAPI
-      .previewBulkDeleteCardMovements({ creditCardId: Number(cardId), yearMonth })
+      .previewBulkDeleteCardMovements({ creditCardId: cardId, yearMonth })
       .then((res) => {
         if (!cancelled) setPreview(res);
       })
@@ -91,7 +91,7 @@ export function BulkDeleteCardModal({
     try {
       setDeleting(true);
       setError(null);
-      await onConfirm(Number(cardId), yearMonth);
+      await onConfirm(cardId, yearMonth);
       onClose();
     } catch (err: any) {
       setError(err?.message || 'Erro ao excluir lançamentos');
@@ -133,7 +133,7 @@ export function BulkDeleteCardModal({
           <Select
             value={cardId}
             label="Cartão"
-            onChange={(e) => setCardId(e.target.value === '' ? '' : Number(e.target.value))}
+            onChange={(e) => setCardId(String(e.target.value ?? ''))}
             className="rounded-xl text-xs"
           >
             {creditCards.map((card) => (
@@ -193,6 +193,17 @@ export function BulkDeleteCardModal({
                   </>
                 )}
               </p>
+              {preview.members.length > 0 && (
+                <p>
+                  De:{' '}
+                  {preview.members.map((m, i) => (
+                    <span key={m.member_id}>
+                      {i > 0 && ', '}
+                      <span className="font-semibold text-slate-900">{m.name ?? 'membro desconhecido'}</span> ({m.count})
+                    </span>
+                  ))}
+                </p>
+              )}
               {preview.fixedCount > 0 && (
                 <p className="text-amber-700">
                   Inclui {preview.fixedCount} lançamento(s) gerado(s) por despesas fixas.

@@ -18,15 +18,10 @@ export const fixedEntrySchema = yup.object().shape({
     .required('Dia é obrigatório')
     .min(1, 'Mínimo dia 1')
     .max(31, 'Máximo dia 31'),
-  category_id: yup
-    .number()
-    .typeError('Selecione uma categoria')
-    .required('Categoria é obrigatória'),
-  credit_card_id: yup
-    .number()
-    .transform((val) => (isNaN(val) || val === '' ? null : val))
-    .nullable()
-    .optional(),
+  category_id: yup.string().required('Selecione uma categoria'),
+  credit_card_id: yup.string().optional(),
+  /** Responsável (De quem). Vazio = ninguém em específico. */
+  member_id: yup.string().optional(),
   recurrence: yup.string().default('MONTHLY'),
   start_date: yup.string().required('Data de início é obrigatória'),
   end_date: yup

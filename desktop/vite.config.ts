@@ -18,7 +18,8 @@ export default defineConfig({
           resolve: { alias: coreAlias },
           build: {
             rollupOptions: {
-              external: ['sql.js'],
+              // ws tem dependências nativas opcionais (bufferutil); vai empacotado em node_modules
+              external: ['sql.js', 'ws', 'bufferutil', 'utf-8-validate'],
             },
           },
         },

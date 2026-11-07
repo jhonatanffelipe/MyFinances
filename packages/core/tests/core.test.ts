@@ -235,7 +235,10 @@ describe('lançamentos e faturas (regras da v1)', () => {
     await core.movements.create.execute({ description: 'Estorno', amount: 20, date: '2026-10-05', type: 'INCOME', credit_card_id: inter });
     await core.movements.create.execute(expense({ date: '2026-11-02', credit_card_id: inter }));
     const preview = await core.movements.previewBulkDeleteCard.execute(inter, '2026-10');
-    assert.deepEqual(preview, { count: 2, totalExpense: 100, totalIncome: 20, fixedCount: 0 });
+    const { members, ...totals } = preview;
+    assert.deepEqual(totals, { count: 2, totalExpense: 100, totalIncome: 20, fixedCount: 0 });
+    assert.equal(members.length, 1);
+    assert.equal(members[0].count, 2);
     assert.equal(await core.movements.bulkDeleteCard.execute(inter, '2026-10'), 2);
     assert.equal((await core.movements.list.execute({ creditCardId: 'all_ungrouped' })).total, 1);
     await assert.rejects(core.movements.bulkDeleteCard.execute(inter, '2026-13'), (e) => AppError.is(e, 'VALIDATION'));

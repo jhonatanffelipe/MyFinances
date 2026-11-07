@@ -1,17 +1,8 @@
-import { registerAuthIpc } from './auth.ipc.js';
-import { registerCategoriesIpc } from './categories.ipc.js';
-import { registerCreditCardsIpc } from './creditCards.ipc.js';
-import { registerDashboardIpc } from './dashboard.ipc.js';
-import { registerDbIpc } from './db.ipc.js';
-import { registerFixedExpensesIpc } from './fixedExpenses.ipc.js';
-import { registerMovementsIpc } from './movements.ipc.js';
+import type { AppController } from '../app/appController';
+import { registerAppIpc } from './app.ipc';
+import { registerDataIpc } from './data.ipc';
 
-export function registerAllIpcHandlers() {
-  registerDbIpc();
-  registerAuthIpc();
-  registerCategoriesIpc();
-  registerCreditCardsIpc();
-  registerMovementsIpc();
-  registerFixedExpensesIpc();
-  registerDashboardIpc();
+export function registerAllIpcHandlers(controller: AppController) {
+  registerAppIpc(controller);
+  registerDataIpc(controller);
 }
