@@ -189,7 +189,8 @@ export interface IElectronAPI {
   toggleFixedExpensePaid: (id: string, yearMonth: string, paid: boolean) => Promise<boolean>;
 
   // Dashboard
-  getDashboardData: (yearMonth?: string) => Promise<DashboardData>;
+  /** `memberId` nulo/ausente = visão da família inteira. */
+  getDashboardData: (yearMonth?: string, memberId?: string | null) => Promise<DashboardData>;
 }
 
 

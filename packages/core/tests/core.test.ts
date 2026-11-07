@@ -357,3 +357,95 @@ describe('importação de fatura', () => {
     assert.equal((await core.movements.executeImport.execute(all, null)).imported, 2);
   });
 });
+
+describe('totalização da família (Etapa 7)', () => {
+  /** Ana e Beto lançando em outubro, com mesada de Ana para Beto e um fixo de cada. */
+  async function familyScenario(withTransfer = true) {
+    const { core } = await setupCore();
+    const card = await core.creditCards.create.execute({ description: 'Nubank', due_day: 8 });
+    await core.movements.create.execute({ description: 'Salário Ana', amount: 5000, date: '2026-10-05', type: 'INCOME' });
+    await core.movements.create.execute({ description: 'Salário Beto', amount: 3000, date: '2026-10-05', type: 'INCOME', member_id: BETO });
+    await core.movements.create.execute(expense({ description: 'Mercado', amount: 800, date: '2026-10-08' }));
+    await core.movements.create.execute(expense({ description: 'Tênis', amount: 400, date: '2026-10-12', member_id: BETO, credit_card_id: card }));
+    await core.movements.create.execute(expense({ description: 'Setembro', amount: 100, date: '2026-09-20', member_id: BETO }));
+    if (withTransfer) {
+      await core.movements.create.execute({ description: 'Mesada', amount: 200, date: '2026-10-10', type: 'TRANSFER', to_member_id: BETO });
+    }
+    await core.fixedExpenses.create.execute({ description: 'Aluguel', amount: 1500, member_id: ANA, due_day: 5, start_date: '2026-10-01', end_date: '2027-12-31' });
+    await core.fixedExpenses.create.execute({ description: 'Academia', amount: 100, member_id: BETO, due_day: 10, start_date: '2026-10-01', end_date: '2027-12-31' });
+    return { core };
+  }
+
+  it('visão família = soma das visões individuais', async () => {
+    const { core } = await familyScenario();
+    const fam = await core.dashboard.get.execute('2026-10');
+    const ana = await core.dashboard.get.execute('2026-10', { memberId: ANA });
+    const beto = await core.dashboard.get.execute('2026-10', { memberId: BETO });
+
+    assert.deepEqual(fam.view, { memberId: null, memberName: null });
+    assert.deepEqual(beto.view, { memberId: BETO, memberName: 'Beto' });
+    assert.equal(fam.monthIncome, ana.monthIncome + beto.monthIncome);
+    assert.equal(fam.monthExpense, ana.monthExpense + beto.monthExpense);
+    assert.equal(fam.totalBalance, ana.totalBalance + beto.totalBalance);
+    assert.equal(fam.fixedExpensesTotal, ana.fixedExpensesTotal + beto.fixedExpensesTotal);
+    for (let i = 0; i < fam.monthlyHistory.length; i++) {
+      assert.equal(fam.monthlyHistory[i].expense, ana.monthlyHistory[i].expense + beto.monthlyHistory[i].expense);
+    }
+    // Números conferidos à mão (os fixos geram os lançamentos do mês: 1500 da Ana, 100 do Beto)
+    assert.equal(fam.monthIncome, 8000);
+    assert.equal(fam.monthExpense, 800 + 400 + 1500 + 100);
+    assert.equal(beto.monthExpense, 400 + 100);
+    assert.equal(fam.totalBalance, 8000 - 2800 - 100);
+  });
+
+  it('transferência não muda os totais da família e entra no saldo de quem envia/recebe', async () => {
+    const withT = await familyScenario(true);
+    const without = await familyScenario(false);
+    const a = await withT.core.dashboard.get.execute('2026-10');
+    const b = await without.core.dashboard.get.execute('2026-10');
+    assert.equal(a.totalBalance, b.totalBalance);
+    assert.equal(a.monthIncome, b.monthIncome);
+    assert.equal(a.monthExpense, b.monthExpense);
+    assert.equal(a.transferIn + a.transferOut, 0);
+
+    const ana = await withT.core.dashboard.get.execute('2026-10', { memberId: ANA });
+    const beto = await withT.core.dashboard.get.execute('2026-10', { memberId: BETO });
+    const anaSem = await without.core.dashboard.get.execute('2026-10', { memberId: ANA });
+    assert.equal(ana.transferOut, 200);
+    assert.equal(beto.transferIn, 200);
+    assert.equal(ana.totalBalance, anaSem.totalBalance - 200);
+    assert.equal(ana.monthExpense, anaSem.monthExpense, 'mesada não é despesa');
+    assert.ok(!beto.expensesByCategory.some((c) => c.value === 200));
+  });
+
+  it('gráficos e listas respeitam a visão; byMember é sempre da família', async () => {
+    const { core } = await familyScenario();
+    const fam = await core.dashboard.get.execute('2026-10');
+    const ana = await core.dashboard.get.execute('2026-10', { memberId: ANA });
+    assert.deepEqual(
+      fam.byMember.map((m) => [m.name, m.income, m.expense]).sort(),
+      [
+        ['Ana', 5000, 2300],
+        ['Beto', 3000, 500],
+      ],
+    );
+    assert.deepEqual(ana.byMember, fam.byMember);
+    assert.equal(ana.expensesByCard.length, 0, 'o cartão só foi usado pelo Beto');
+    assert.deepEqual(ana.upcomingFixedExpenses.map((f) => [f.description, f.member_name]), [['Aluguel', 'Ana']]);
+    assert.equal(fam.upcomingFixedExpenses.length, 2);
+  });
+
+  it('membro de outra família é recusado', async () => {
+    const { core } = await familyScenario();
+    await assert.rejects(core.dashboard.get.execute('2026-10', { memberId: CAIO }), (e) => AppError.is(e, 'NOT_MEMBER'));
+  });
+
+  it('limite de categoria considera o consumo da família inteira', async () => {
+    const { core } = await setupCore();
+    const cat = await core.categories.create.execute({ name: 'Lazer', type: 'EXPENSE', monthly_limit: 500 });
+    await core.movements.create.execute(expense({ category_id: cat, amount: 300 }));
+    await core.movements.create.execute(expense({ category_id: cat, amount: 150, member_id: BETO }));
+    const list = await core.categories.list.execute({ yearMonth: '2026-10', perPage: 100 });
+    assert.equal(list.data.find((c) => c.id === cat)?.consumed, 450);
+  });
+});

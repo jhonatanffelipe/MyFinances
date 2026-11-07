@@ -153,6 +153,11 @@ const MIGRATIONS: string[] = [
     detected_at TEXT NOT NULL
   );
   `,
+  // v2 (Etapa 7): visão por membro também olha quem RECEBE transferências
+  `
+  CREATE INDEX IF NOT EXISTS movements_family_to_member_idx ON movements (family_id, to_member_id)
+    WHERE to_member_id IS NOT NULL AND deleted_at IS NULL;
+  `,
 ];
 
 export const LOCAL_SCHEMA_VERSION = MIGRATIONS.length;

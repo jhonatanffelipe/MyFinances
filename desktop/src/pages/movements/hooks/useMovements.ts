@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Category, CreditCard, Movement, MovementFilters as FiltersType } from '../../../types/database';
 import { MovementFormData } from '../constants';
+import { useAppState } from '../../../contexts/AppStateContext';
 
 function getCurrentMonthRange() {
   const now = new Date();
@@ -16,6 +17,8 @@ function getCurrentMonthRange() {
 }
 
 export function useMovements() {
+  // O filtro "Membro" é a mesma visão do dashboard (Família | Eu | membro)
+  const { viewMemberId, setViewMemberId } = useAppState();
   const [movements, setMovements] = useState<Movement[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [creditCards, setCreditCards] = useState<CreditCard[]>([]);
@@ -42,10 +45,16 @@ export function useMovements() {
       endDate,
       categoryId: undefined,
       creditCardId: undefined,
+      memberId: viewMemberId ?? undefined,
       type: 'ALL',
       search: '',
     };
   });
+
+  useEffect(() => {
+    if ((filters.memberId ?? null) !== viewMemberId) setViewMemberId(filters.memberId ?? null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filters.memberId]);
 
   // Sequência de requisições: só a resposta da última busca é aplicada na tela
   // (evita que um período maior, mais lento, sobrescreva o resultado do mês atual)

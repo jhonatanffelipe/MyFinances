@@ -139,8 +139,8 @@ export const APP_CHANNELS = {
 export interface IAppAPI {
   getState(): Promise<AppState>;
   onStateChanged(cb: (state: AppState) => void): () => void;
-  /** Dados alterados por OUTRO aparelho: a tela atual recarrega. */
-  onDataChanged(cb: () => void): () => void;
+  /** Dados alterados por OUTRO aparelho (com debounce): a tela atual recarrega. */
+  onDataChanged(cb: (change: { tables: string[] }) => void): () => void;
 
   checkConnection(url: string, key: string): Promise<{ schemaVersion: number }>;
   /** Testa a conexão salva. */

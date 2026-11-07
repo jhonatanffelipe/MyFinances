@@ -10,6 +10,19 @@ import { CategoryPieChart } from './components/CategoryPieChart';
 import { CreditCardBarChart } from './components/CreditCardBarChart';
 import { CreditCardPieChart } from './components/CreditCardPieChart';
 import { FixedExpensesChart } from './components/FixedExpensesChart';
+import { MemberTotalsChart } from './components/MemberTotalsChart';
+import { UpcomingFixedExpensesList } from './components/UpcomingFixedExpensesList';
+import { ViewSelector } from '../../components/Members/ViewSelector';
+import { useAppState } from '../../contexts/AppStateContext';
+import type { DashboardData } from '../../types/database';
+
+/** Rótulos dos KPIs conforme a visão: "Saldo da família" / "Seu saldo" / "Saldo de Beto". */
+function viewLabels(view: DashboardData['view'], myId: string | undefined) {
+  if (!view.memberId) return { balance: 'Saldo da família', income: 'Receitas da família no mês', expense: 'Despesas da família no mês' };
+  if (view.memberId === myId) return { balance: 'Seu saldo', income: 'Suas receitas no mês', expense: 'Suas despesas no mês' };
+  const name = view.memberName?.split(' ')[0] ?? 'membro';
+  return { balance: `Saldo de ${name}`, income: `Receitas de ${name} no mês`, expense: `Despesas de ${name} no mês` };
+}
 
 export function DashboardPage() {
   const {
@@ -22,11 +35,13 @@ export function DashboardPage() {
     loading,
     error,
   } = useDashboard();
+  const { state } = useAppState();
 
   return (
     <div className="space-y-6 pt-1">
       {/* Month Navigation Selector */}
-      <div className="flex justify-end items-center">
+      <div className="flex justify-between items-center gap-3 flex-wrap">
+        <ViewSelector />
         <div className="flex items-center gap-2 flex-wrap">
           <div className="flex items-center gap-1 bg-white px-2 py-1.5 rounded-2xl border border-slate-100 shadow-sm">
             <Tooltip title="Mês anterior">
@@ -102,14 +117,18 @@ export function DashboardPage() {
           <>
             {/* KPI Summary Cards */}
             <KpiCards
+              viewLabel={viewLabels(data.view, state.user?.id)}
               totalBalance={data.totalBalance}
               monthIncome={data.monthIncome}
               monthExpense={data.monthExpense}
-              fixedExpensesTotal={data.fixedExpensesTotal}
               balanceTrend={data.balanceTrend}
               incomeTrend={data.incomeTrend}
               expenseTrend={data.expenseTrend}
+              transfers={data.view.memberId ? { transferIn: data.transferIn, transferOut: data.transferOut } : null}
             />
+
+            {/* Receita × despesa de cada membro (só faz sentido com mais de um) */}
+            {state.members.length > 1 && <MemberTotalsChart data={data.byMember} highlightId={data.view.memberId} />}
 
             {/* 2x2 Charts Section matching Figma Screen 06 */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -124,6 +143,8 @@ export function DashboardPage() {
               data={data.fixedExpensesHistory || []}
               currentYearMonth={selectedYearMonth}
             />
+
+            <UpcomingFixedExpensesList expenses={data.upcomingFixedExpenses} />
           </>
         )
       )}

@@ -2,8 +2,10 @@ import { useCallback, useEffect, useState } from 'react';
 import dayjs from 'dayjs';
 import { DashboardData } from '../../../types/database';
 import { getCurrentYearMonth } from '../constants';
+import { useAppState } from '../../../contexts/AppStateContext';
 
 export function useDashboard() {
+  const { viewMemberId } = useAppState();
   const [selectedYearMonth, setSelectedYearMonth] = useState<string>(getCurrentYearMonth());
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -14,7 +16,7 @@ export function useDashboard() {
       setLoading(true);
       setError(null);
       if (window.electronAPI) {
-        const dashboardData = await window.electronAPI.getDashboardData(selectedYearMonth);
+        const dashboardData = await window.electronAPI.getDashboardData(selectedYearMonth, viewMemberId);
         setData(dashboardData);
       }
     } catch (err: any) {
@@ -22,7 +24,7 @@ export function useDashboard() {
     } finally {
       setLoading(false);
     }
-  }, [selectedYearMonth]);
+  }, [selectedYearMonth, viewMemberId]);
 
   useEffect(() => {
     fetchDashboardData();

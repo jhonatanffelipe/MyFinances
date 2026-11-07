@@ -98,6 +98,8 @@ export interface FixedExpense {
   id: Uuid;
   /** Responsável (opcional). */
   member_id: Uuid | null;
+  /** Nome do responsável (join local). */
+  member_name?: string | null;
   description: string;
   amount: number;
   /** EXPENSE = despesa fixa; INCOME = receita fixa. */
@@ -145,6 +147,8 @@ export interface PaginatedResult<T> {
 }
 
 export interface DashboardData {
+  /** Visão calculada: família (memberId null) ou um membro. */
+  view: { memberId: Uuid | null; memberName: string | null };
   totalBalance: number;
   monthIncome: number;
   monthExpense: number;
@@ -157,4 +161,9 @@ export interface DashboardData {
   expensesByCard: Array<{ id: Uuid; label: string; value: number; color: string }>;
   upcomingFixedExpenses: Array<FixedExpense & { formattedDueDate: string }>;
   fixedExpensesHistory: Array<{ month: string; yearMonth: string; value: number }>;
+  /** Só na visão de membro: transferências recebidas/enviadas no mês (fora de receita/despesa). */
+  transferIn: number;
+  transferOut: number;
+  /** Receita × despesa de cada membro no mês (sempre da família toda). */
+  byMember: Array<{ memberId: Uuid; name: string; income: number; expense: number }>;
 }

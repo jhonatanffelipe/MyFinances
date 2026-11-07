@@ -35,6 +35,8 @@ import { LocalDatabaseFile } from './localDatabase';
 import { ElectronNetworkMonitor } from './networkMonitor';
 
 const fetchFn = fetch as unknown as FetchLike;
+/** Janela para juntar vários pulls (ex.: importação em lote de outro membro) numa recarga só. */
+const DATA_CHANGED_DEBOUNCE_MS = 500;
 const FAMILY_TABLES = ['movements', 'categories', 'credit_cards', 'fixed_expenses', 'fixed_expense_payments', 'family_members'];
 
 /** Dados de um usuário logado: SQLite local dele, core, conta e sincronização. */
@@ -74,6 +76,7 @@ export class AppController {
   private pendingInviteCode: string | null = null;
   private pendingInviteInfo: AppState['pendingInvite'] = null;
   private phase: AppState['phase'] = 'loading';
+  private dataChanged: { timer: NodeJS.Timeout | null; tables: Set<string> } = { timer: null, tables: new Set() };
 
   // ------------------------------------------------------------------ ciclo de vida
 
@@ -313,7 +316,7 @@ export class AppController {
   async selectFamily(familyId: string): Promise<AppState> {
     await this.ws().account.session.selectFamily(familyId);
     await this.activateFamily(familyId);
-    broadcast(APP_CHANNELS.DATA_CHANGED);
+    this.notifyDataChanged();
     return this.publish();
   }
 
@@ -427,10 +430,7 @@ export class AppController {
     this.workspace = ws;
     ws.unsubscribers.push(
       engine.onStatus((s) => broadcast(APP_CHANNELS.SYNC_STATUS_CHANGED, s)),
-      engine.onRemoteChange(() => {
-        broadcast(APP_CHANNELS.DATA_CHANGED);
-        this.publish().catch(() => undefined); // membros podem ter mudado
-      }),
+      engine.onRemoteChange((tables) => this.notifyDataChanged(tables)),
     );
 
     // Offline-first: abre com as famílias do banco local, sem esperar o servidor
@@ -467,7 +467,7 @@ export class AppController {
         if (state.activeFamilyId !== before) {
           if (state.activeFamilyId) {
             await this.activateFamily(state.activeFamilyId);
-            broadcast(APP_CHANNELS.DATA_CHANGED);
+            this.notifyDataChanged();
           } else {
             this.phase = 'family';
           }
@@ -475,6 +475,22 @@ export class AppController {
         await this.publish();
       })
       .catch(() => undefined); // offline: segue com o cache local
+  }
+
+  /**
+   * Dados de OUTRO aparelho chegaram no SQLite local: avisa o renderer (que recarrega a
+   * tela atual) com debounce, juntando as tabelas tocadas.
+   */
+  private notifyDataChanged(tables: string[] = []) {
+    tables.forEach((t) => this.dataChanged.tables.add(t));
+    if (this.dataChanged.timer) clearTimeout(this.dataChanged.timer);
+    this.dataChanged.timer = setTimeout(() => {
+      const changed = [...this.dataChanged.tables];
+      this.dataChanged = { timer: null, tables: new Set() };
+      broadcast(APP_CHANNELS.DATA_CHANGED, { tables: changed });
+      // Membros/nome da família vivem no AppState (seletores, "De quem"): republica
+      if (changed.length === 0 || changed.includes('members') || changed.includes('families')) this.publish().catch(() => undefined);
+    }, DATA_CHANGED_DEBOUNCE_MS);
   }
 
   /** Perfil (nome, foto) do servidor; sem rede, fica o que veio da lista de membros. */

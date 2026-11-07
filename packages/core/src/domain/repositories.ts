@@ -190,11 +190,32 @@ export interface PeriodTotals {
   expense: number;
 }
 
+/** Visão do dashboard: `memberId` nulo = família inteira. */
+export interface DashboardScope {
+  memberId: Uuid | null;
+}
+
 export interface DashboardQueries {
-  balanceUntil(date: string): Promise<number>;
-  totals(start: string, end: string): Promise<PeriodTotals>;
-  fixedExpensesTotal(start: string, end: string): Promise<number>;
-  expensesByCategory(start: string, end: string): Promise<Array<{ id: Uuid; label: string; value: number; color: string }>>;
-  expensesByCard(start: string, end: string): Promise<Array<{ id: Uuid; label: string; value: number; color: string }>>;
-  upcomingFixedExpenses(yearMonth: string, start: string, end: string): Promise<FixedExpense[]>;
+  /** Nome do membro na família ativa (null se não for membro). */
+  memberName(memberId: Uuid): Promise<string | null>;
+  /** Saldo até a data. Na visão de membro, transferências entram com sinal (envia −, recebe +). */
+  balanceUntil(date: string, scope: DashboardScope): Promise<number>;
+  /** Receita e despesa por mês (YYYY-MM) no intervalo, sem transferências. Meses sem lançamento não vêm. */
+  monthlyTotals(start: string, end: string, scope: DashboardScope): Promise<Array<PeriodTotals & { yearMonth: string }>>;
+  /** Transferências recebidas/enviadas pelo membro no período (zero na visão família). */
+  transfers(start: string, end: string, scope: DashboardScope): Promise<{ transferIn: number; transferOut: number }>;
+  /** Despesas fixas ativas que tocam o intervalo (para o total e o histórico). */
+  activeFixedExpenses(start: string, end: string, scope: DashboardScope): Promise<Array<{ amount: number; start_date: string; end_date: string | null }>>;
+  expensesByCategory(start: string, end: string, scope: DashboardScope): Promise<Array<{ id: Uuid; label: string; value: number; color: string }>>;
+  expensesByCard(start: string, end: string, scope: DashboardScope): Promise<Array<{ id: Uuid; label: string; value: number; color: string }>>;
+  /** Receita × despesa de cada membro no período (sempre da família toda, sem transferências). */
+  byMember(start: string, end: string): Promise<DashboardMemberTotals[]>;
+  upcomingFixedExpenses(yearMonth: string, start: string, end: string, scope: DashboardScope): Promise<FixedExpense[]>;
+}
+
+export interface DashboardMemberTotals {
+  member_id: Uuid;
+  name: string | null;
+  income: number;
+  expense: number;
 }

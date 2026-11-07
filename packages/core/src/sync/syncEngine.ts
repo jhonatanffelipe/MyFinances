@@ -84,11 +84,14 @@ interface OutboxEntry {
  * - falha de rede para o ciclo e tenta de novo com backoff exponencial;
  * - o cursor só é salvo depois da última página do pull.
  */
+/** O que um pull pode ter mudado: tabelas de dados, membros ou o nome da família. */
+export type RemoteChangedTable = SyncedTable | 'members' | 'families';
+
 export class SyncEngine {
   private readonly opts: Required<Omit<SyncEngineOptions, 'scheduler'>>;
   private readonly scheduler: Scheduler;
   private readonly listeners = new Set<(status: SyncStatus) => void>();
-  private readonly remoteListeners = new Set<(tables: SyncedTable[]) => void>();
+  private readonly remoteListeners = new Set<(tables: RemoteChangedTable[]) => void>();
   private status: SyncStatus = {
     phase: 'idle',
     pending: 0,
@@ -189,7 +192,7 @@ export class SyncEngine {
    * Avisa quando o pull trouxe dados de OUTROS aparelhos (a UI recarrega a tela).
    * Diferente de `store.onChange`, não dispara nas gravações locais.
    */
-  onRemoteChange(listener: (tables: SyncedTable[]) => void): () => void {
+  onRemoteChange(listener: (tables: RemoteChangedTable[]) => void): () => void {
     this.remoteListeners.add(listener);
     return () => {
       this.remoteListeners.delete(listener);
@@ -383,6 +386,7 @@ export class SyncEngine {
     let applied = 0;
     let received = 0;
     const touched = new Set<SyncedTable>();
+    const meta = new Set<'members' | 'families'>();
     let last: PullPage;
 
     do {
@@ -391,6 +395,7 @@ export class SyncEngine {
       applied += result.applied;
       received += result.received;
       result.tables.forEach((t) => touched.add(t));
+      result.meta.forEach((t) => meta.add(t));
       page = last.page;
       this.setStatus({ pulledRows: received });
     } while (last.has_more);
@@ -400,11 +405,12 @@ export class SyncEngine {
        ON CONFLICT (family_id) DO UPDATE SET cursor = excluded.cursor, last_pull_at = excluded.last_pull_at`,
       [familyId, last.cursor, this.store.clock.now()],
     );
-    if (touched.size > 0) {
-      this.store.emit([...touched]);
+    if (touched.size > 0) this.store.emit([...touched]);
+    if (touched.size > 0 || meta.size > 0) {
+      const changed: RemoteChangedTable[] = [...touched, ...meta];
       for (const l of this.remoteListeners) {
         try {
-          l([...touched]);
+          l(changed);
         } catch {
           // ouvinte com erro não derruba o sync
         }
@@ -413,12 +419,31 @@ export class SyncEngine {
     return applied;
   }
 
-  private async applyPage(familyId: Uuid, page: PullPage): Promise<{ applied: number; received: number; tables: SyncedTable[] }> {
+  private async applyPage(
+    familyId: Uuid,
+    page: PullPage,
+  ): Promise<{ applied: number; received: number; tables: SyncedTable[]; meta: Array<'members' | 'families'> }> {
     let applied = 0;
     let received = 0;
     const tables: SyncedTable[] = [];
+    const meta: Array<'members' | 'families'> = [];
     await this.db.transaction(async (tx) => {
       const { family, members } = page.changes;
+      // O servidor manda família e membros em todo pull: só conta como mudança se diferir do local
+      if (family) {
+        const current = await tx.first<{ name: string }>('SELECT name FROM families WHERE id = ?', [family.id]);
+        if (current?.name !== family.name) meta.push('families');
+      }
+      if (members) {
+        const key = (rows: Array<{ user_id: string; role: string; active: unknown; name: string | null; avatar_url: string | null }>) =>
+          JSON.stringify(
+            rows
+              .map((m) => [m.user_id, m.role, m.active ? 1 : 0, m.name ?? '', m.avatar_url ?? ''])
+              .sort((a, b) => String(a[0]).localeCompare(String(b[0]))),
+          );
+        const current = await tx.all('SELECT user_id, role, active, name, avatar_url FROM members WHERE family_id = ?', [familyId]);
+        if (key(current) !== key(members)) meta.push('members');
+      }
       if (family) {
         await tx.run(
           `INSERT INTO families (id, name, created_by, created_at) VALUES (?, ?, ?, ?)
@@ -454,7 +479,7 @@ export class SyncEngine {
         if (changedHere) tables.push(table);
       }
     });
-    return { applied, received, tables };
+    return { applied, received, tables, meta };
   }
 
   private async upsertLocal(tx: DbAdapter, table: SyncedTable, row: Record<string, any>) {

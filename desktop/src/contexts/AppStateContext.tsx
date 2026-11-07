@@ -20,6 +20,12 @@ interface AppStateContextValue {
    * esquece o banco conectado.
    */
   requestSignOut: (options?: { forgetConnection?: boolean }) => Promise<void>;
+  /**
+   * Visão ativa (dashboard e lançamentos): null = Família, ou o id de um membro.
+   * Volta para Família ao trocar de família.
+   */
+  viewMemberId: string | null;
+  setViewMemberId: (memberId: string | null) => void;
 }
 
 const LOADING: AppState = {
@@ -52,6 +58,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
   const [sync, setSync] = useState<SyncStatusView>(IDLE_SYNC);
   const [dataVersion, setDataVersion] = useState(0);
   const [pairingRequest, setPairingRequest] = useState<PairingRequestView | null>(null);
+  const [view, setView] = useState<{ familyId: string | null; memberId: string | null }>({ familyId: null, memberId: null });
   const [signOutConfirm, setSignOutConfirm] = useState<{ pending: number; forgetConnection: boolean } | null>(null);
 
   const refresh = useCallback(async () => {
@@ -89,6 +96,14 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
     [signOutNow],
   );
 
+  // A visão vale só para a família em que foi escolhida e para membros que existem nela
+  const viewMemberId =
+    view.familyId === state.activeFamilyId && state.members.some((m) => m.user_id === view.memberId) ? view.memberId : null;
+  const setViewMemberId = useCallback(
+    (memberId: string | null) => setView({ familyId: state.activeFamilyId, memberId }),
+    [state.activeFamilyId],
+  );
+
   const value = useMemo<AppStateContextValue>(
     () => ({
       state,
@@ -100,8 +115,10 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       apply: setState,
       refresh,
       requestSignOut,
+      viewMemberId,
+      setViewMemberId,
     }),
-    [state, sync, dataVersion, pairingRequest, refresh, requestSignOut],
+    [state, sync, dataVersion, pairingRequest, refresh, requestSignOut, viewMemberId, setViewMemberId],
   );
 
   return (

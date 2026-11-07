@@ -1,6 +1,7 @@
 import React from 'react';
-import { CalendarClock, CheckCircle } from 'lucide-react';
-import { Paper, Chip } from '@mui/material';
+import { CalendarClock, CheckCircle2 } from 'lucide-react';
+import { Paper } from '@mui/material';
+import { MemberAvatar } from '../../../components/Members/MemberAvatar';
 import { FixedExpense } from '../../../types/database';
 
 interface UpcomingFixedExpensesListProps {
@@ -17,7 +18,7 @@ export function UpcomingFixedExpensesList({ expenses }: UpcomingFixedExpensesLis
       <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
         <CalendarClock className="w-5 h-5 text-amber-600" />
         <div>
-          <h3 className="font-bold text-base text-slate-800">Despesas Fixas Previstas para o Mês</h3>
+          <h3 className="font-bold text-base text-slate-800">Despesas fixas do mês</h3>
           <p className="text-xs text-slate-500">Contas a vencer no período selecionado</p>
         </div>
       </div>
@@ -53,6 +54,24 @@ export function UpcomingFixedExpensesList({ expenses }: UpcomingFixedExpensesLis
                 <p className="text-lg font-extrabold text-red-600 font-mono mt-0.5">
                   {formatCurrency(exp.amount)}
                 </p>
+              </div>
+
+              <div className="flex items-center justify-between gap-2 text-[11px]">
+                <span className="inline-flex items-center gap-1.5 text-slate-600 font-semibold min-w-0">
+                  {exp.member_name ? (
+                    <>
+                      <MemberAvatar name={exp.member_name} size={16} />
+                      <span className="truncate">{exp.member_name}</span>
+                    </>
+                  ) : (
+                    <span className="text-slate-400">Família</span>
+                  )}
+                </span>
+                {exp.paid ? (
+                  <span className="inline-flex items-center gap-1 text-emerald-700 font-bold">
+                    <CheckCircle2 className="w-3.5 h-3.5" /> Pago
+                  </span>
+                ) : null}
               </div>
             </div>
           ))}

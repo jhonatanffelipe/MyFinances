@@ -13,10 +13,12 @@ export const FIXED_SELECT = `
          f.due_day, f.start_date, f.end_date, f.active, f.notes, f.created_by, f.created_at,
          c.name AS category_name, c.color AS category_color,
          cc.description AS credit_card_name, cc.color AS credit_card_color,
+         mb.name AS member_name,
          CASE WHEN p.id IS NULL THEN 0 ELSE 1 END AS paid
   FROM fixed_expenses f
   LEFT JOIN categories c    ON c.id = f.category_id AND c.deleted_at IS NULL
   LEFT JOIN credit_cards cc ON cc.id = f.credit_card_id AND cc.deleted_at IS NULL
+  LEFT JOIN members mb      ON mb.family_id = f.family_id AND mb.user_id = f.member_id
   LEFT JOIN fixed_expense_payments p
          ON p.fixed_expense_id = f.id AND p.year_month = ? AND p.deleted_at IS NULL
 `;

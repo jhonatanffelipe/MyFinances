@@ -161,4 +161,26 @@ describe('SyncEngine (unidade)', () => {
     await Promise.all([engine.syncNow(), engine.syncNow(), engine.syncNow()]);
     assert.equal(calls.pull, 1);
   });
+
+  it('avisa mudança de membros só quando eles mudam (o servidor manda a lista em todo pull)', async () => {
+    const { core } = await setupCore();
+    let members = emptyPage().changes.members!;
+    const remote: RemoteSync = {
+      push: async (_f, changes) => ({ applied: changes.length, conflicts: [], xid: '99' }),
+      pull: async () => ({ ...emptyPage(), changes: { ...emptyPage().changes, members } }),
+    };
+    const engine = new SyncEngine(core.store, remote);
+    const events: string[][] = [];
+    engine.onRemoteChange((tables) => events.push(tables));
+
+    await engine.syncNow(); // igual ao que o setup já gravou (Ana e Beto)
+    assert.deepEqual(events, []);
+
+    members = [...members, { user_id: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd', role: 'MEMBER', active: true, name: 'Dani', avatar_url: null }];
+    await engine.syncNow();
+    assert.deepEqual(events, [['members']]);
+
+    await engine.syncNow(); // nada novo
+    assert.equal(events.length, 1);
+  });
 });

@@ -77,14 +77,14 @@ const electronAPI: IElectronAPI = {
   deleteFixedExpense: (id) => invoke(IPC_CHANNELS.FIXED_EXPENSES_DELETE, id),
   toggleFixedExpensePaid: (id, yearMonth, paid) => invoke(IPC_CHANNELS.FIXED_EXPENSES_TOGGLE_PAID, id, yearMonth, paid),
 
-  getDashboardData: (yearMonth) => invoke(IPC_CHANNELS.DASHBOARD_GET_DATA, yearMonth),
+  getDashboardData: (yearMonth, memberId) => invoke(IPC_CHANNELS.DASHBOARD_GET_DATA, yearMonth, memberId ?? null),
 };
 
 const C = APP_CHANNELS;
 const appAPI: IAppAPI = {
   getState: () => invoke(C.STATE_GET),
   onStateChanged: (cb) => subscribe(C.STATE_CHANGED, cb),
-  onDataChanged: (cb) => subscribe(C.DATA_CHANGED, () => cb()),
+  onDataChanged: (cb) => subscribe(C.DATA_CHANGED, (change: { tables: string[] } | undefined) => cb(change ?? { tables: [] })),
 
   checkConnection: (url, key) => invoke(C.CONNECTION_CHECK, url, key),
   testConnection: () => invoke(C.CONNECTION_TEST),

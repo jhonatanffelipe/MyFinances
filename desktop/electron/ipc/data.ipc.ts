@@ -245,8 +245,8 @@ export function registerDataIpc(controller: AppController) {
   });
 
   // ---------------------------------------------------------------- dashboard
-  handle(IPC_CHANNELS.DASHBOARD_GET_DATA, async (yearMonth?: string) => {
-    const data = await core().dashboard.get.execute(yearMonth);
+  handle(IPC_CHANNELS.DASHBOARD_GET_DATA, async (yearMonth?: string, memberId?: string | null) => {
+    const data = await core().dashboard.get.execute(yearMonth, { memberId: nullableId(memberId) });
     return { ...data, upcomingFixedExpenses: data.upcomingFixedExpenses.map((f) => ({ ...fixedView(f), formattedDueDate: f.formattedDueDate })) };
   });
 }
