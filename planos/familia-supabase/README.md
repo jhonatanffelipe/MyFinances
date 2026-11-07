@@ -13,7 +13,7 @@ criado: 2026-11-07
 # Plano: MyFinances Família + Supabase próprio (BYO)
 
 > [!info] Status
-> **Em implementação** no branch `v2.0.0` · Etapa 1 concluída · Criado em 2026-11-07
+> **Em implementação** no branch `v2.0.0` · Etapas 1 e 2 concluídas · Criado em 2026-11-07
 >
 > **Versões:** a versão atual (SQLite + OneDrive) é a **v1.0.0**. Este plano entrega a
 **v2.0.0** (família + Supabase + funcionamento offline com SQLite local).
@@ -65,7 +65,7 @@ criado: 2026-11-07
 | Convite | **Código de conexão** (URL + publishable key + token de convite, em base64url/QR) | O membro cola um código só e já entra no projeto e na família certos |
 | Conectar celular | **QR no computador**: "Sou eu" (pareamento com aprovação no computador, sem senha) ou "Sou outra pessoa" (convite). Ver [[fluxo-conectar-celular\|Conectar celular por QR]] | Celular conectado e sincronizando em segundos, sem digitar URL, chave ou senha |
 | Sessão do celular pareado | Sessão **própria** via Edge Function `pair-device` (`generateLink` + `verifyOtp`) | Copiar o refresh token do computador derrubaria um dos dois aparelhos; a `service_role` fica só na função |
-| Código compartilhado | `packages/core` (Yarn workspaces) com tipos, repositórios e use cases | Acaba a duplicação `desktop/electron/database/schema.ts` × `mobile/src/data/schema.ts` |
+| Código compartilhado | `packages/core` (TypeScript puro, resolvido pelo fonte via alias no Vite/Metro) com tipos, repositórios e use cases | Acaba a duplicação `desktop/electron/database/schema.ts` × `mobile/src/data/schema.ts` |
 | Código compartilhado (base) | Repositórios SQL do mobile sobre `DbAdapter` sobem para o core | Já rodam em expo-sqlite e sql.js; reaproveita a v1 |
 | Desktop | sql.js + `SyncEngine` + supabase-js no **processo main**, mantendo o contrato IPC | A UI quase não muda; sem módulo nativo, o build Windows a partir do Mac continua funcionando; sessão cifrada com `safeStorage` |
 | Mobile | expo-sqlite + `SyncEngine` + supabase-js com sessão no `expo-secure-store` | Já são dependências do projeto |
@@ -111,7 +111,7 @@ Fluxo de conexão do celular por QR: [[fluxo-conectar-celular|Conectar celular p
 | # | Etapa | Entrega | Depende de |
 |---|---|---|---|
 | 1 ✅ | [[etapa-01-fundacao-supabase\|Fundação Supabase]] | Schema, RLS, RPCs, Supabase local em Docker e testes de RLS | — |
-| 2 | [[etapa-02-pacote-core\|Pacote core compartilhado]] | `packages/core` com schema local, repositórios SQL (vindos do mobile) e use cases | 1 |
+| 2 ✅ | [[etapa-02-pacote-core\|Pacote core compartilhado]] | `packages/core` com schema local, repositórios SQL (vindos do mobile) e use cases | 1 |
 | 3 | [[etapa-03-sincronizacao\|Sincronização offline-first]] | Outbox, `SyncEngine`, push/pull, conflitos e testes de convergência | 2 |
 | 4 | [[etapa-04-conexao-byo\|Conexão BYO (onboarding)]] | Tela "Conectar ao seu Supabase", validação e armazenamento seguro | 2 |
 | 5 | [[etapa-05-auth-familias\|Autenticação e famílias]] | Cadastro/login (com uso offline), criar família, convidar, trocar de família, **conectar celular por QR** e aparelhos conectados | 3, 4 |

@@ -8,6 +8,9 @@
       ],
       "@/assets/*": [
         "./assets/*"
+      ],
+      "@myfinances/core": [
+        "../packages/core/src/index.ts"
       ]
     }
   },

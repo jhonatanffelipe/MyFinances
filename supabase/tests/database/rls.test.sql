@@ -295,6 +295,18 @@ select throws_ok(
   'P0001', 'forbidden', 'pull de família alheia é recusado');
 select tests.logout();
 
+select tests.login('b0000000-0000-0000-0000-00000000000b');
+select lives_ok(
+  $$update public.categories set deleted_at = now() where id = 'ca100000-0000-0000-0000-000000000001'$$,
+  'categoria é excluída logicamente');
+select lives_ok(
+  $$insert into public.categories (family_id, name, type) values ('f1000000-0000-0000-0000-000000000001', 'Mercado', 'EXPENSE')$$,
+  'nome de categoria excluída pode ser reaproveitado');
+select throws_ok(
+  $$insert into public.categories (family_id, name, type) values ('f1000000-0000-0000-0000-000000000001', 'Mercado', 'EXPENSE')$$,
+  '23505', null, 'duas categorias vivas com o mesmo nome e tipo são recusadas');
+select tests.logout();
+
 -- =====================================================================
 -- 8. Anônimo (só a publishable key, sem login)
 -- =====================================================================

@@ -1,0 +1,26 @@
+// API pública do @myfinances/core. Os apps importam só daqui.
+export * from './errors/AppError';
+export * from './domain/types';
+export * from './domain/ports';
+export * from './domain/repositories';
+export * from './domain/date';
+export * from './domain/money';
+export * from './domain/recurrence';
+export * from './db/adapter';
+export * from './db/localStore';
+export { LOCAL_SCHEMA_VERSION, migrateLocalDatabase } from './db/schema';
+export * from './connection/connection';
+export { base64UrlDecode, base64UrlEncode } from './connection/base64url';
+export * from './services/importTypes';
+export { parseAndAnalyzeImport, importKey, parseBrazilianNumber } from './services/importParser';
+export type { ImportDbSnapshot } from './services/importParser';
+export type { CategoryInput } from './use-cases/categories';
+export { DEFAULT_CATEGORIES } from './use-cases/categories';
+export type { CreditCardInput } from './use-cases/creditCards';
+export type { MovementInput } from './use-cases/movements';
+export { groupCardInvoices } from './use-cases/movements';
+export type { FixedExpenseInput } from './use-cases/fixedExpenses';
+export type { ImportAnalysis } from './use-cases/imports';
+export { createCore } from './createCore';
+export type { Core, CoreDependencies } from './createCore';
+export { createSqlJsAdapter } from './db/sqljsAdapter';

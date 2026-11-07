@@ -3,6 +3,11 @@ import path from 'node:path';
 import { defineConfig } from 'vite';
 import electron from 'vite-plugin-electron/simple';
 
+// Pacote compartilhado com o mobile (TypeScript puro, sem dependências de runtime).
+// Resolvido pelo código-fonte: não há build nem workspace hoisted (o desktop usa React 18
+// e o mobile React 19, que não podem dividir o mesmo node_modules).
+const coreAlias = { '@myfinances/core': path.resolve(__dirname, '../packages/core/src/index.ts') };
+
 export default defineConfig({
   plugins: [
     react(),
@@ -10,6 +15,7 @@ export default defineConfig({
       main: {
         entry: 'electron/main.ts',
         vite: {
+          resolve: { alias: coreAlias },
           build: {
             rollupOptions: {
               external: ['sql.js'],
@@ -36,6 +42,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
+      ...coreAlias,
     },
   },
   optimizeDeps: {

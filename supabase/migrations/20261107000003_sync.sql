@@ -45,6 +45,17 @@ begin
   end loop;
 end $$;
 
+-- ---------- Unicidade só entre linhas vivas ----------
+-- Com soft delete, uma categoria apagada não pode bloquear outra com o mesmo nome,
+-- e um lançamento importado e depois apagado não pode impedir a reimportação.
+alter table public.categories drop constraint if exists categories_family_id_type_name_key;
+create unique index if not exists categories_family_type_name_uq
+  on public.categories (family_id, type, name) where deleted_at is null;
+
+drop index if exists public.movements_import_hash_uq;
+create unique index if not exists movements_import_hash_uq
+  on public.movements (family_id, import_hash) where import_hash is not null and deleted_at is null;
+
 -- ---------- Log de conflitos (diagnóstico) ----------
 create table if not exists public.sync_conflicts (
   id          bigint generated always as identity primary key,
