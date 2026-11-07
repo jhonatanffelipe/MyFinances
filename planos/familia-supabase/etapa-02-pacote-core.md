@@ -1,3 +1,17 @@
+---
+tags:
+  - myfinances
+  - plano/v2
+  - etapa
+aliases:
+  - "Etapa 2"
+  - "Pacote core compartilhado"
+etapa: 2
+status: pendente
+plano: "[[README|Plano v2.0.0]]"
+depende_de:
+  - "[[etapa-01-fundacao-supabase]]"
+---
 # Etapa 2 — Pacote `core` compartilhado (local-first)
 
 **Objetivo:** uma única implementação de regras de negócio e acesso a dados, usada pelo
@@ -64,3 +78,7 @@ packages/core/
 
 - O core compila isolado e os testes passam com sql.js.
 - Desktop e mobile importam `@myfinances/core` sem erro de bundler.
+
+---
+
+[[etapa-01-fundacao-supabase|← Etapa 1]] · [[README|Plano v2.0.0]] · [[etapa-03-sincronizacao|Etapa 3 →]]

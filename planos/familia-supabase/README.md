@@ -1,9 +1,22 @@
+---
+tags:
+  - myfinances
+  - plano/v2
+  - moc
+aliases:
+  - "Plano v2.0.0"
+  - "MyFinances v2"
+status: planejado
+versao: 2.0.0
+criado: 2026-11-07
+---
 # Plano: MyFinances Família + Supabase próprio (BYO)
 
-> Status: **plano, decisões fechadas** (implementação ainda não iniciada) · Criado em 2026-11-07
+> [!info] Status
+> **Plano com decisões fechadas** (implementação ainda não iniciada) · Criado em 2026-11-07
 >
 > **Versões:** a versão atual (SQLite + OneDrive) é a **v1.0.0**. Este plano entrega a
-> **v2.0.0** (família + Supabase + funcionamento offline com SQLite local).
+**v2.0.0** (família + Supabase + funcionamento offline com SQLite local).
 
 ## Objetivo
 
@@ -50,7 +63,7 @@
 | Criação do schema | Script SQL idempotente colado no **SQL Editor** do Supabase | A anon key não executa DDL; pedir a senha do banco ao usuário seria tratar segredo sem necessidade |
 | Versão do schema | Tabela `app_meta` + RPC `app_schema_version()` | O app avisa "rode a migração X" quando o banco estiver desatualizado |
 | Convite | **Código de conexão** (URL + publishable key + token de convite, em base64url/QR) | O membro cola um código só e já entra no projeto e na família certos |
-| Conectar celular | **QR no computador**: "Sou eu" (pareamento com aprovação no computador, sem senha) ou "Sou outra pessoa" (convite). Ver [fluxo-conectar-celular.md](fluxo-conectar-celular.md) | Celular conectado e sincronizando em segundos, sem digitar URL, chave ou senha |
+| Conectar celular | **QR no computador**: "Sou eu" (pareamento com aprovação no computador, sem senha) ou "Sou outra pessoa" (convite). Ver [[fluxo-conectar-celular\|Conectar celular por QR]] | Celular conectado e sincronizando em segundos, sem digitar URL, chave ou senha |
 | Sessão do celular pareado | Sessão **própria** via Edge Function `pair-device` (`generateLink` + `verifyOtp`) | Copiar o refresh token do computador derrubaria um dos dois aparelhos; a `service_role` fica só na função |
 | Código compartilhado | `packages/core` (Yarn workspaces) com tipos, repositórios e use cases | Acaba a duplicação `desktop/electron/database/schema.ts` × `mobile/src/data/schema.ts` |
 | Código compartilhado (base) | Repositórios SQL do mobile sobre `DbAdapter` sobem para o core | Já rodam em expo-sqlite e sql.js; reaproveita a v1 |
@@ -64,50 +77,61 @@
 
 ## Modelo de dados (visão)
 
-```
-auth.users ─1:1─ profiles
-     │
-     └─< family_members >─ families ─< family_invites
-                              │
-          ┌───────────────────┼────────────────────┬───────────────────┐
-     categories          credit_cards        fixed_expenses ─< fixed_expense_payments
-          │                   │                    │
-          └──────────────< movements >─────────────┘
-                     (member_id = de quem é o gasto,
-                      created_by = quem digitou)
+```mermaid
+erDiagram
+    AUTH_USERS ||--|| PROFILES : "1:1"
+    AUTH_USERS ||--o{ FAMILY_MEMBERS : participa
+    FAMILIES ||--o{ FAMILY_MEMBERS : tem
+    FAMILIES ||--o{ FAMILY_INVITES : convida
+    FAMILIES ||--o{ CATEGORIES : tem
+    FAMILIES ||--o{ CREDIT_CARDS : tem
+    FAMILIES ||--o{ FIXED_EXPENSES : tem
+    FIXED_EXPENSES ||--o{ FIXED_EXPENSE_PAYMENTS : baixas
+    CATEGORIES ||--o{ MOVEMENTS : classifica
+    CREDIT_CARDS |o--o{ MOVEMENTS : paga
+    FIXED_EXPENSES |o--o{ MOVEMENTS : origina
+    FAMILY_MEMBERS ||--o{ MOVEMENTS : "member_id (de quem é)"
+    FAMILY_MEMBERS |o--o{ MOVEMENTS : "to_member_id (transferência)"
+    AUTH_USERS ||--o{ MOVEMENTS : "created_by (quem digitou)"
 ```
 
 Cada dispositivo tem um **SQLite local** com as mesmas tabelas da família, mais
 `_outbox` (alterações pendentes de envio), `_sync_state` (cursor) e `_sync_conflicts`.
 
-O rascunho completo está em [`sql/`](sql/):
-[`001_schema.sql`](sql/001_schema.sql), [`002_rls.sql`](sql/002_rls.sql),
-[`003_rpc.sql`](sql/003_rpc.sql) (regra dos totais, como referência) e
-[`004_sync.sql`](sql/004_sync.sql) (sincronização) e
-[`005_device_link.sql`](sql/005_device_link.sql) (QR / aparelhos conectados), mais a Edge
-Function [`functions/pair-device`](functions/pair-device/index.ts).
+O rascunho completo está na pasta `sql/`:
+[[sql/001_schema.sql]], [[sql/002_rls.sql]],
+[[sql/003_rpc.sql]] (regra dos totais, como referência) e
+[[sql/004_sync.sql]] (sincronização) e
+[[sql/005_device_link.sql]] (QR / aparelhos conectados), mais a Edge
+Function [[functions/pair-device/index.ts|functions/pair-device]].
 
-Fluxo de conexão do celular por QR: [fluxo-conectar-celular.md](fluxo-conectar-celular.md).
+Fluxo de conexão do celular por QR: [[fluxo-conectar-celular|Conectar celular por QR]].
 
 ## Etapas
 
+> [!tip] Arquivos `.sql` e `.ts` no Obsidian
+> Para os links dos rascunhos SQL e da Edge Function abrirem, ative **Settings → Files and links → Detect all file extensions**.
+
 | # | Etapa | Entrega | Depende de |
 |---|---|---|---|
-| 1 | [Fundação Supabase](etapa-01-fundacao-supabase.md) | Schema, RLS, RPCs, Supabase local em Docker e testes de RLS | — |
-| 2 | [Pacote core compartilhado](etapa-02-pacote-core.md) | `packages/core` com schema local, repositórios SQL (vindos do mobile) e use cases | 1 |
-| 3 | [Sincronização offline-first](etapa-03-sincronizacao.md) | Outbox, `SyncEngine`, push/pull, conflitos e testes de convergência | 2 |
-| 4 | [Conexão BYO (onboarding)](etapa-04-conexao-byo.md) | Tela "Conectar ao seu Supabase", validação e armazenamento seguro | 2 |
-| 5 | [Autenticação e famílias](etapa-05-auth-familias.md) | Cadastro/login (com uso offline), criar família, convidar, trocar de família, **conectar celular por QR** e aparelhos conectados | 3, 4 |
-| 6 | [Desktop local-first](etapa-06-desktop.md) | Handlers IPC sobre o core, indicador de sync, sem OneDrive | 5 |
-| 7 | [Totalização da família](etapa-07-totalizacao-familia.md) | Dashboard local com visão Família / por membro, transferências e tempo real | 6 |
-| 8 | [Mobile local-first](etapa-08-mobile.md) | App Android sobre o core, sem OneDrive | 5 (paralelo à 6/7) |
-| 9 | [Importar o banco da v1](etapa-09-migracao-dados.md) | **Obrigatório na v2.0.0.** Importação do `.sqlite` da v1 no primeiro uso (e pelo Perfil), no desktop e no celular | 3, 5 |
-| 10 | [Limpeza, release e guia](etapa-10-limpeza-release.md) | Remoção do OneDrive, builds v2.0.0 e guia de instalação para amigos | 7, 8, 9 |
+| 1 | [[etapa-01-fundacao-supabase\|Fundação Supabase]] | Schema, RLS, RPCs, Supabase local em Docker e testes de RLS | — |
+| 2 | [[etapa-02-pacote-core\|Pacote core compartilhado]] | `packages/core` com schema local, repositórios SQL (vindos do mobile) e use cases | 1 |
+| 3 | [[etapa-03-sincronizacao\|Sincronização offline-first]] | Outbox, `SyncEngine`, push/pull, conflitos e testes de convergência | 2 |
+| 4 | [[etapa-04-conexao-byo\|Conexão BYO (onboarding)]] | Tela "Conectar ao seu Supabase", validação e armazenamento seguro | 2 |
+| 5 | [[etapa-05-auth-familias\|Autenticação e famílias]] | Cadastro/login (com uso offline), criar família, convidar, trocar de família, **conectar celular por QR** e aparelhos conectados | 3, 4 |
+| 6 | [[etapa-06-desktop\|Desktop local-first]] | Handlers IPC sobre o core, indicador de sync, sem OneDrive | 5 |
+| 7 | [[etapa-07-totalizacao-familia\|Totalização da família]] | Dashboard local com visão Família / por membro, transferências e tempo real | 6 |
+| 8 | [[etapa-08-mobile\|Mobile local-first]] | App Android sobre o core, sem OneDrive | 5 (paralelo à 6/7) |
+| 9 | [[etapa-09-migracao-dados\|Importar o banco da v1]] | **Obrigatório na v2.0.0.** Importação do `.sqlite` da v1 no primeiro uso (e pelo Perfil), no desktop e no celular | 3, 5 |
+| 10 | [[etapa-10-limpeza-release\|Limpeza, release e guia]] | Remoção do OneDrive, builds v2.0.0 e guia de instalação para amigos | 7, 8, 9 |
 
 As Etapas 3 e 4 podem andar em paralelo depois da 2. As Etapas 6–7 (desktop) e 8 (mobile)
 podem andar em paralelo depois da 5.
 
 ## Riscos e limitações conhecidos
+
+> [!warning] Leia antes de começar
+> Os dois maiores riscos são a pausa do projeto gratuito e a complexidade da sincronização.
 
 - **Plano gratuito do Supabase pausa o projeto após ~7 dias sem atividade.** O dono precisa
   reativá-lo no painel. O app precisa reconhecer esse erro e mostrar a instrução certa

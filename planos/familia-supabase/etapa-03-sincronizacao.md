@@ -1,3 +1,17 @@
+---
+tags:
+  - myfinances
+  - plano/v2
+  - etapa
+aliases:
+  - "Etapa 3"
+  - "Sincronização offline-first"
+etapa: 3
+status: pendente
+plano: "[[README|Plano v2.0.0]]"
+depende_de:
+  - "[[etapa-02-pacote-core]]"
+---
 # Etapa 3 — Sincronização offline-first
 
 **Objetivo:** o app funciona 100% sem internet usando um SQLite local, e sincroniza sozinho
@@ -6,15 +20,17 @@ interna do app.
 
 ## Arquitetura
 
-```
-UI ──► use cases (core) ──► repositórios SQL ──► SQLite local   ◄── sempre lê/grava aqui
-                                   │
-                                   └─ mesma transação: INSERT em _outbox
-                                                │
-                     SyncEngine (core) ─────────┤ quando online
-                       ├─ PUSH: _outbox → rpc('sync_push')   (lotes de 200)
-                       └─ PULL: rpc('sync_pull', cursor) → upsert local
-                            disparado por: abrir app · voltar online · Realtime · a cada 60 s
+```mermaid
+flowchart LR
+    UI --> UC["use cases (core)"] --> R[repositórios SQL] --> DB[("SQLite local<br/>sempre lê/grava aqui")]
+    R -- mesma transação --> OB[("_outbox")]
+    subgraph SE["SyncEngine (core) · quando online"]
+        PUSH["PUSH: _outbox → rpc('sync_push')<br/>lotes de 200"]
+        PULL["PULL: rpc('sync_pull', cursor) → upsert local"]
+    end
+    OB --> PUSH --> SB[(Supabase)]
+    SB --> PULL --> DB
+    T(["abrir app · voltar online · Realtime · a cada 60 s"]) -.dispara.-> PULL
 ```
 
 ### Arquivo local
@@ -50,7 +66,7 @@ dados. Logout pergunta se apaga a cópia local (se houver itens pendentes no out
    `sync_conflicts` e devolve a lista. O app mostra um aviso discreto ("2 lançamentos foram
    alterados por outra pessoa") com acesso ao histórico.
 7. **Cursor de pull = `xid8`**, não timestamp nem sequence. Explicação no cabeçalho de
-   [`sql/004_sync.sql`](sql/004_sync.sql). O upsert local é idempotente porque o pull pode
+   [[sql/004_sync.sql|sql/004_sync.sql]]. O upsert local é idempotente porque o pull pode
    repetir linhas.
 8. **Pull não sobrescreve pendência local:** se a linha recebida tem item no outbox, o local
    prevalece até o push (senão a edição offline "voltaria" antes de subir).
@@ -93,3 +109,7 @@ dados. Logout pergunta se apaga a cópia local (se houver itens pendentes no out
 - Dá para usar o app em modo avião por dias, voltar a internet e ver os dados aparecerem no
   outro dispositivo sem ação manual.
 - Todos os testes de convergência acima passam.
+
+---
+
+[[etapa-02-pacote-core|← Etapa 2]] · [[README|Plano v2.0.0]] · [[etapa-04-conexao-byo|Etapa 4 →]]

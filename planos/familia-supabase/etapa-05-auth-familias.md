@@ -1,3 +1,18 @@
+---
+tags:
+  - myfinances
+  - plano/v2
+  - etapa
+aliases:
+  - "Etapa 5"
+  - "Autenticação e famílias"
+etapa: 5
+status: pendente
+plano: "[[README|Plano v2.0.0]]"
+depende_de:
+  - "[[etapa-03-sincronizacao]]"
+  - "[[etapa-04-conexao-byo]]"
+---
 # Etapa 5 — Autenticação e famílias
 
 **Objetivo:** substituir o login local (nome + senha scrypt em `users`) pelo Supabase Auth e
@@ -44,11 +59,11 @@ introduzir família, membros e convites.
   `cannot_change_self`.
 
 ### Conectar celular por QR Code (pareamento + convite)
-Especificação completa: [fluxo-conectar-celular.md](fluxo-conectar-celular.md).
-- [ ] Aplicar [`sql/005_device_link.sql`](sql/005_device_link.sql): `device_pairings`,
+Especificação completa: [[fluxo-conectar-celular|Conectar celular por QR]].
+- [ ] Aplicar [[sql/005_device_link.sql|sql/005_device_link.sql]]: `device_pairings`,
   `user_devices`, `create_device_link`, `resolve_device_pairing`, `register_device` e
   `revoke_device`.
-- [ ] Edge Function [`pair-device`](functions/pair-device/index.ts) em `supabase/functions/`,
+- [ ] Edge Function [[functions/pair-device/index.ts|pair-device]] em `supabase/functions/`,
   publicada com `--no-verify-jwt`; ações `ping`, `scan` e `status`.
 - [ ] Use cases no core: `CreateDeviceLink` (computador), `ScanDeviceLink` /
   `WaitPairingApproval` / `CompletePairing` (celular), `ResolvePairing`, `RegisterDevice`,
@@ -84,3 +99,7 @@ cola o código, cria a conta, e o app chama `accept_family_invite` automaticamen
 - No celular, ler o QR e escolher "Sou eu" + Permitir no computador deixa o app logado e
   sincronizando sem digitar nada. Ler o mesmo QR num segundo celular falha.
 - Desconectar um aparelho em "Aparelhos conectados" o desloga em até 1 h.
+
+---
+
+[[etapa-04-conexao-byo|← Etapa 4]] · [[README|Plano v2.0.0]] · [[etapa-06-desktop|Etapa 6 →]]

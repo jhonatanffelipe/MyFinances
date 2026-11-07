@@ -1,3 +1,17 @@
+---
+tags:
+  - myfinances
+  - plano/v2
+  - etapa
+aliases:
+  - "Etapa 7"
+  - "Totalização da família"
+etapa: 7
+status: pendente
+plano: "[[README|Plano v2.0.0]]"
+depende_de:
+  - "[[etapa-06-desktop]]"
+---
 # Etapa 7 — Totalização da família
 
 **Objetivo:** a funcionalidade central pedida. Saldo, receitas, despesas e gráficos somam
@@ -7,7 +21,7 @@ todos os membros da família, com a opção de ver um membro só.
 
 - [ ] **Totais calculados no SQLite local**, para o dashboard funcionar offline e refletir na
   hora o que acabou de ser lançado. `GetDashboard` no core reimplementa em SQL do SQLite a
-  mesma regra de [`sql/003_rpc.sql`](sql/003_rpc.sql) (que fica como especificação de
+  mesma regra de [[sql/003_rpc.sql|sql/003_rpc.sql]] (que fica como especificação de
   referência e não é chamada pelo app). Todas as consultas filtram `deleted_at IS NULL`.
 - [ ] Trocar o loop de 5 consultas do histórico mensal (`dashboard.ipc.ts`) por uma consulta
   agrupada por `strftime('%Y-%m', date)`.
@@ -47,3 +61,7 @@ filho inflaria os totais da família, que aparentaria ganhar e gastar R$ 200 a m
 
 - Com 2 membros lançando, o dashboard "Família" bate com a soma manual, e "Eu" mostra só os
   próprios lançamentos.
+
+---
+
+[[etapa-06-desktop|← Etapa 6]] · [[README|Plano v2.0.0]] · [[etapa-08-mobile|Etapa 8 →]]

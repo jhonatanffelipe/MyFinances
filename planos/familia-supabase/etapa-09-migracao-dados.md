@@ -1,10 +1,26 @@
+---
+tags:
+  - myfinances
+  - plano/v2
+  - etapa
+aliases:
+  - "Etapa 9"
+  - "Importar o banco da v1"
+etapa: 9
+status: pendente
+plano: "[[README|Plano v2.0.0]]"
+depende_de:
+  - "[[etapa-03-sincronizacao]]"
+  - "[[etapa-05-auth-familias]]"
+---
 # Etapa 9 — Importar o banco da v1 (migração direta)
 
 **Objetivo:** na v2.0.0, quem já usa a v1 escolhe o próprio `db_myfinances.sqlite` e o app
 migra tudo para a família, logo no primeiro uso, num passo só. Nada de script manual,
 exportar CSV ou rodar SQL.
 
-> **Obrigatório na v2.0.0.** A release não sai sem esta etapa.
+> [!important] Obrigatório na v2.0.0
+> A release não sai sem esta etapa.
 
 ## Onde aparece
 
@@ -21,18 +37,14 @@ abre com expo-sqlite.
 
 ## Fluxo
 
-```
-Escolher arquivo .sqlite
-  └─ Validar ─► é um banco MyFinances v1? (tabelas movements/categories/...) ── não ─► erro claro
-        ▼
-  Prévia: N categorias · N cartões · N fixos · N baixas · N lançamentos · período (mín–máx)
-          "Atribuir histórico a:" [membro ▼]   (padrão = você)
-        ▼
-  Importar ─► grava no SQLite local (transação por tabela) ─► entra no _outbox
-        ▼
-  Relatório: importados × já existentes (ignorados) × com problema
-        ▼
-  Sincronização envia ao Supabase em lotes (barra de progresso "enviando X de Y")
+```mermaid
+flowchart TD
+    A[Escolher arquivo .sqlite] --> B{"É um banco MyFinances v1?<br/>(movements, categories...)"}
+    B -- não --> E[Erro claro]
+    B -- sim --> P["Prévia: N categorias · N cartões · N fixos · N baixas · N lançamentos · período<br/>Atribuir histórico a: [membro ▼] (padrão = você)"]
+    P --> I["Importar: grava no SQLite local<br/>(transação por tabela) e entra no _outbox"]
+    I --> R["Relatório: importados × já existentes (ignorados) × com problema"]
+    R --> S["Sincronização envia ao Supabase em lotes<br/>barra de progresso: enviando X de Y"]
 ```
 
 Funciona **offline**: os dados entram no banco local na hora e sobem quando houver internet.
@@ -79,3 +91,7 @@ Funciona **offline**: os dados entram no banco local na hora e sobem quando houv
   e o dashboard "Família" mostra os mesmos totais que a v1 no mesmo mês, também no celular
   depois da sincronização.
 - Importar o mesmo arquivo de novo não duplica nada.
+
+---
+
+[[etapa-08-mobile|← Etapa 8]] · [[README|Plano v2.0.0]] · [[etapa-10-limpeza-release|Etapa 10 →]]

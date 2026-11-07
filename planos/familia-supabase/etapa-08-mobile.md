@@ -1,3 +1,17 @@
+---
+tags:
+  - myfinances
+  - plano/v2
+  - etapa
+aliases:
+  - "Etapa 8"
+  - "Mobile local-first"
+etapa: 8
+status: pendente
+plano: "[[README|Plano v2.0.0]]"
+depende_de:
+  - "[[etapa-05-auth-familias]]"
+---
 # Etapa 8 — Mobile local-first
 
 **Objetivo:** o app Android passa a usar o core (expo-sqlite + sincronização com o
@@ -16,7 +30,7 @@ Supabase), sem OneDrive. Pode rodar em paralelo às Etapas 6–7, depois da 5.
 - [ ] Primeira tela com **Ler QR Code** como ação principal (`expo-camera` para ler o
   código) e "Conectar manualmente" como alternativa. Telas "Quem vai usar este celular?",
   "Confirme no computador" e mensagens de expirado/recusado/já usado, conforme o
-  [fluxo de conexão do celular](fluxo-conectar-celular.md).
+  [[fluxo-conectar-celular|fluxo de conexão do celular]].
 - [ ] Nome do aparelho para o pedido de aprovação via `expo-device` (já é dependência), por
   exemplo "Moto G (Android)".
 - [ ] Telas novas/ajustadas: seletor de família,
@@ -33,3 +47,7 @@ Supabase), sem OneDrive. Pode rodar em paralelo às Etapas 6–7, depois da 5.
 - Um lançamento feito no celular em modo avião aparece no desktop do outro membro assim que o
   celular volta a ter internet.
 - O APK não contém nenhuma referência a OneDrive/Microsoft.
+
+---
+
+[[etapa-07-totalizacao-familia|← Etapa 7]] · [[README|Plano v2.0.0]] · [[etapa-09-migracao-dados|Etapa 9 →]]

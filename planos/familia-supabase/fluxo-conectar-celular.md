@@ -1,10 +1,27 @@
+---
+tags:
+  - myfinances
+  - plano/v2
+  - fluxo
+aliases:
+  - "Conectar celular por QR"
+  - "Fluxo do QR"
+status: pendente
+plano: "[[README|Plano v2.0.0]]"
+etapas:
+  - "[[etapa-04-conexao-byo]]"
+  - "[[etapa-05-auth-familias]]"
+  - "[[etapa-06-desktop]]"
+  - "[[etapa-08-mobile]]"
+---
 # Fluxo: conectar o celular por QR Code
 
-> Especificação transversal. É implementada nas Etapas [4](etapa-04-conexao-byo.md)
-> (formato do QR), [5](etapa-05-auth-familias.md) (backend e regras),
-> [6](etapa-06-desktop.md) (tela no computador) e [8](etapa-08-mobile.md) (leitura no
-> celular). Rascunhos: [`sql/005_device_link.sql`](sql/005_device_link.sql) e
-> [`functions/pair-device/index.ts`](functions/pair-device/index.ts).
+> [!abstract] Especificação transversal
+> É implementada nas Etapas [[etapa-04-conexao-byo|4]]
+> (formato do QR), [[etapa-05-auth-familias|5]] (backend e regras),
+> [[etapa-06-desktop|6]] (tela no computador) e [[etapa-08-mobile|8]] (leitura no
+> celular). Rascunhos: [[sql/005_device_link.sql|sql/005_device_link.sql]] e
+> [[functions/pair-device/index.ts|functions/pair-device/index.ts]].
 
 ## Objetivo
 
@@ -30,21 +47,16 @@ família criar a conta dela e entrar na família.
 **No celular**, a primeira tela tem **Ler QR Code** como ação principal e "Conectar
 manualmente" como alternativa.
 
-```
-Celular lê o QR
-  └─ "Família Nascimento · conectado por Jhonatan"
-     Quem vai usar este celular?
-       ┌──────────────────────────────┬───────────────────────────────────────┐
-       │ Sou eu (Jhonatan)            │ Sou outra pessoa da família             │
-       ▼                              ▼
-  Computador: "Moto G quer       Já tenho conta?
-  conectar. Permitir?"            ├─ Não → Criar conta (nome, e-mail, senha)
-       │ [Permitir] [Negar]       │        → entra na família do QR (convite)
-       ▼                          └─ Sim → Login (e-mail, senha)
-  Entra logado, sem senha                  → é adicionado à família do QR
-       └──────────────┬──────────────────────────┘
-                      ▼
-   register_device → carga inicial do SQLite local → Dashboard da família do QR
+```mermaid
+flowchart TD
+    Q["Celular lê o QR<br/>Família Nascimento · conectado por Jhonatan"] --> W{Quem vai usar este celular?}
+    W -- "Sou eu (Jhonatan)" --> P["Computador: Moto G quer conectar. Permitir?"]
+    P -- Permitir --> S[Entra logado, sem senha]
+    P -- Negar --> D[Conexão recusada]
+    W -- "Sou outra pessoa da família" --> T{Já tem conta?}
+    T -- não --> N["Criar conta (nome, e-mail, senha)<br/>entra na família do QR (convite)"]
+    T -- sim --> L["Login (e-mail, senha)<br/>é adicionado à família do QR"]
+    S & N & L --> R["register_device → carga inicial do SQLite local → Dashboard da família do QR"]
 ```
 
 - **"Sou eu"** = **pareamento**: mesma conta, aparelho novo. Não pede família nem usuário.
@@ -79,21 +91,26 @@ Celular lê o QR
 
 ## Sequência do pareamento ("Sou eu")
 
-```
-Computador                      Supabase                               Celular
-rpc create_device_link ───────► device_pairings: WAITING_SCAN
-mostra QR; assina Realtime
-  em device_pairings (só os seus)
-                                                         ◄──── pair-device {scan, token, "Moto G"}
-                                 WAITING_APPROVAL ─────────────► "Confirme no computador..."
-"Moto G quer conectar" ◄──────── (Realtime)
-[Permitir] → rpc resolve_device_pairing(true)
-                                 APPROVED (vale 1 min)
-                                                         ◄──── pair-device {status} (a cada 2 s)
-                                 CONSUMED + generateLink ──────► token_hash
-                                                                 verifyOtp(token_hash)
-                                                                 → sessão PRÓPRIA do celular
-                                                                 rpc register_device("Moto G")
+```mermaid
+sequenceDiagram
+    participant PC as Computador
+    participant SB as Supabase
+    participant C as Celular
+    PC->>SB: rpc create_device_link
+    Note over SB: device_pairings: WAITING_SCAN
+    Note over PC: mostra o QR e assina Realtime<br/>em device_pairings (só os seus)
+    C->>SB: pair-device {scan, token, "Moto G"}
+    SB-->>C: WAITING_APPROVAL ("Confirme no computador...")
+    SB-->>PC: Realtime: "Moto G quer conectar"
+    PC->>SB: [Permitir] rpc resolve_device_pairing(true)
+    Note over SB: APPROVED (vale 1 min)
+    loop a cada 2 s
+        C->>SB: pair-device {status}
+    end
+    SB-->>C: CONSUMED + generateLink → token_hash
+    C->>SB: verifyOtp(token_hash)
+    Note over C: sessão PRÓPRIA do celular
+    C->>SB: rpc register_device("Moto G")
 ```
 
 Por que não copiar a sessão do computador: o Supabase troca o refresh token a cada uso. Dois
@@ -129,3 +146,7 @@ Nada trava, e o guia de instalação explica como criar a função para a experi
 | `EXPIRED` | "Este QR expirou. Gere um novo no computador." |
 | `CONSUMED` (lido por outro aparelho) | "Este QR já foi usado." |
 | Sem internet | "Conecte-se à internet para o primeiro acesso." |
+
+---
+
+[[README|Plano v2.0.0]]

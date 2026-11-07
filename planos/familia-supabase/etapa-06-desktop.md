@@ -1,3 +1,17 @@
+---
+tags:
+  - myfinances
+  - plano/v2
+  - etapa
+aliases:
+  - "Etapa 6"
+  - "Desktop local-first"
+etapa: 6
+status: pendente
+plano: "[[README|Plano v2.0.0]]"
+depende_de:
+  - "[[etapa-05-auth-familias]]"
+---
 # Etapa 6 — Desktop local-first
 
 **Objetivo:** o desktop usa o core (SQLite local + sincronização) no lugar do banco no
@@ -25,7 +39,7 @@ credenciais.
 - [ ] Indicador no `AppLayout`: online/offline, "sincronizando", "N pendentes", erro.
 - [ ] Tela **Conectar celular** (Perfil e menu do seletor de família): QR gerado por
   `create_device_link`, contagem regressiva e regeneração automática ao expirar. Detalhes em
-  [fluxo-conectar-celular.md](fluxo-conectar-celular.md).
+  [[fluxo-conectar-celular|Conectar celular por QR]].
 - [ ] **Diálogo de aprovação** global ("Moto G quer conectar. Permitir / Negar"), disparado
   pelo Realtime em `device_pairings`. Aparece em qualquer tela enquanto o QR estiver válido.
 - [ ] **Perfil → Aparelhos conectados**: lista de `user_devices` com "Desconectar".
@@ -43,3 +57,7 @@ credenciais.
 
 - Todas as telas atuais funcionam **com a rede desligada**, e as alterações sobem ao religar.
 - Não sobra nenhuma referência a OneDrive, `.lock` ou escolha de pasta.
+
+---
+
+[[etapa-05-auth-familias|← Etapa 5]] · [[README|Plano v2.0.0]] · [[etapa-07-totalizacao-familia|Etapa 7 →]]

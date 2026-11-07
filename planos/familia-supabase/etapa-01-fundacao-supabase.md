@@ -1,3 +1,16 @@
+---
+tags:
+  - myfinances
+  - plano/v2
+  - etapa
+aliases:
+  - "Etapa 1"
+  - "Fundação Supabase"
+etapa: 1
+status: pendente
+plano: "[[README|Plano v2.0.0]]"
+depende_de: []
+---
 # Etapa 1 — Fundação Supabase
 
 **Objetivo:** ter o banco Postgres pronto, versionado e com isolamento por família
@@ -7,14 +20,14 @@
 
 - [ ] Criar `supabase/` na raiz do repo (`npx supabase init`) para versionar as migrações.
 - [ ] Subir o stack local com Docker (`npx supabase start`): Postgres, Auth, PostgREST e Studio.
-- [ ] Mover os rascunhos de [`sql/`](sql/) para `supabase/migrations/` com timestamp:
+- [ ] Mover os rascunhos de `sql/` para `supabase/migrations/` com timestamp:
   - `..._001_schema.sql`: tabelas, tipos, índices e triggers
   - `..._002_rls.sql`: RLS, helpers e RPCs de família
   - `..._003_rpc.sql`: agregações do dashboard (especificação de referência; o app calcula
     no SQLite local)
   - `..._004_sync.sql`: colunas de sync, `sync_push` e `sync_pull` (detalhados na Etapa 3)
   - `..._005_device_link.sql`: pareamento por QR e aparelhos conectados (Etapa 5)
-- [ ] Mover [`functions/pair-device`](functions/pair-device/index.ts) para
+- [ ] Mover [[functions/pair-device/index.ts|functions/pair-device]] para
   `supabase/functions/` e servir localmente com `npx supabase functions serve`.
 - [ ] Gerar **um único `setup.sql` concatenado e idempotente** (script `yarn db:bundle`) para o
   usuário final colar no SQL Editor. Ele é o artefato que acompanha cada release.
@@ -48,3 +61,7 @@
 - `supabase db reset` aplica tudo do zero sem erro.
 - A suíte de RLS passa.
 - O `setup.sql` roda num projeto Supabase **novo na nuvem** pelo SQL Editor sem ajustes.
+
+---
+
+[[README|Plano v2.0.0]] · [[etapa-02-pacote-core|Etapa 2 →]]

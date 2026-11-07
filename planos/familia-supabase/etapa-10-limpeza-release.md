@@ -1,3 +1,19 @@
+---
+tags:
+  - myfinances
+  - plano/v2
+  - etapa
+aliases:
+  - "Etapa 10"
+  - "Limpeza, release e guia"
+etapa: 10
+status: pendente
+plano: "[[README|Plano v2.0.0]]"
+depende_de:
+  - "[[etapa-07-totalizacao-familia]]"
+  - "[[etapa-08-mobile]]"
+  - "[[etapa-09-migracao-dados]]"
+---
 # Etapa 10 — Limpeza, release e guia para os amigos
 
 **Objetivo:** deixar o projeto pronto para entregar a outras famílias.
@@ -49,3 +65,7 @@
 
 - Um amigo, só com o guia, instala, conecta, cria a família, conecta o próprio celular pelo QR
   e convida alguém sem sua ajuda.
+
+---
+
+[[etapa-09-migracao-dados|← Etapa 9]] · [[README|Plano v2.0.0]]
