@@ -11,6 +11,8 @@ import {
   MIN_SCHEMA_VERSION,
   normalizeProjectUrl,
   projectRef,
+  SupabasePairingFunction,
+  type FetchLike,
 } from '../src/index';
 
 const jwt = (payload: object) => `eyJhbGciOiJIUzI1NiJ9.${base64UrlEncode(JSON.stringify(payload))}.assinatura`;
@@ -83,5 +85,22 @@ describe('conexão com o Supabase', () => {
     assert.doesNotThrow(() => assertSchemaVersion(MIN_SCHEMA_VERSION));
     assert.throws(() => assertSchemaVersion(null), (e) => AppError.is(e, 'SCHEMA_MISSING'));
     assert.throws(() => assertSchemaVersion(MIN_SCHEMA_VERSION - 1), (e) => AppError.is(e, 'SCHEMA_OUTDATED'));
+  });
+});
+
+describe('pareamento (Edge Function pair-device)', () => {
+  const pairing = (body: unknown) =>
+    new SupabasePairingFunction({ url: 'https://abcdefghijklmnop.supabase.co', key: 'sb_publishable_x' }, (async () => ({
+      status: 200,
+      text: async () => JSON.stringify(body),
+    })) as unknown as FetchLike);
+
+  it('"APPROVED" sem token (corrida com o Permitir) continua esperando, não quebra o login', async () => {
+    assert.deepEqual(await pairing({ status: 'APPROVED' }).status('t'.repeat(43)), { status: 'WAITING_APPROVAL' });
+  });
+
+  it('"APPROVED" com token entrega o token para o verifyOtp', async () => {
+    const r = await pairing({ status: 'APPROVED', token_hash: 'abc', email: 'a@b.c' }).status('t'.repeat(43));
+    assert.deepEqual(r, { status: 'APPROVED', tokenHash: 'abc', email: 'a@b.c' });
   });
 });

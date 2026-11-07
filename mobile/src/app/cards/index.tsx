@@ -5,11 +5,11 @@ import { FAB, Icon, Text } from 'react-native-paper';
 import { Screen } from '../../components/Screen';
 import { EmptyState } from '../../components/EmptyState';
 import { useData } from '../../hooks/useData';
-import { listCreditCards } from '../../data/repositories/creditCards';
+
 import { COLORS } from '../../theme/tokens';
 
 export default function Cards() {
-  const { data, loading, reload } = useData(() => listCreditCards(), []);
+  const { data, loading, reload } = useData(async (core) => (await core.creditCards.list.execute({ perPage: 9999 })).data, []);
   return (
     <View style={{ flex: 1 }}>
       <Screen refreshing={loading && Boolean(data)} onRefresh={reload} bottomInset={96}>

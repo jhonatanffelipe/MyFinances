@@ -5,7 +5,7 @@ import { Switch, Text, TextInput } from 'react-native-paper';
 import { FormScreen } from '../../components/FormScreen';
 import { ColorPicker } from '../../components/ColorPicker';
 import { confirm } from '../../components/confirm';
-import { createCreditCard, deleteCreditCard, getCreditCard, updateCreditCard } from '../../data/repositories/creditCards';
+import { appSession } from '../../engine/session';
 import { COLORS } from '../../theme/tokens';
 
 export default function CardForm() {
@@ -20,13 +20,12 @@ export default function CardForm() {
 
   useEffect(() => {
     if (isNew) return;
-    getCreditCard(Number(id)).then((c) => {
-      if (!c) return;
+    appSession.core().creditCards.get.execute(id).then((c) => {
       setDescription(c.description);
       setDueDay(String(c.due_day));
       setColor(c.color || '#8b5cf6');
       setActive(Boolean(c.active));
-    });
+    }).catch((err) => setError(err?.message));
   }, [id, isNew]);
 
   const save = async () => {
@@ -35,9 +34,10 @@ export default function CardForm() {
     if (!day || day < 1 || day > 31) return setError('Dia de vencimento deve ser entre 1 e 31');
     setSaving(true);
     try {
-      const input = { description: description.trim(), due_day: day, color, active: active ? 1 : 0 };
-      if (isNew) await createCreditCard(input);
-      else await updateCreditCard(Number(id), input);
+      const input = { description: description.trim(), due_day: day, color, active };
+      const core = appSession.core();
+      if (isNew) await core.creditCards.create.execute(input);
+      else await core.creditCards.update.execute(id, input);
       router.back();
     } catch (err: any) {
       setError(err?.message || 'Erro ao salvar');
@@ -48,8 +48,12 @@ export default function CardForm() {
 
   const remove = async () => {
     if (await confirm('Excluir cartão', `Excluir "${description}"? Os lançamentos continuam, mas ficam sem cartão.`)) {
-      await deleteCreditCard(Number(id));
-      router.back();
+      try {
+        await appSession.core().creditCards.remove.execute(id);
+        router.back();
+      } catch (err: any) {
+        setError(err?.message || 'Erro ao excluir');
+      }
     }
   };
 

@@ -348,6 +348,15 @@ describe('importação de fatura', () => {
     assert.deepEqual(await core.movements.executeImport.execute(forced, card), { imported: 1, skipped: 2 });
   });
 
+  it('lançamento já existente sem cartão é marcado como possível duplicado (migrado do mobile)', async () => {
+    const { core } = await setupCore();
+    const csv2 = 'date,title,amount\n2026-10-12,Livraria Cultura,80.00\n';
+    await core.movements.create.execute(expense({ description: 'Livraria Cultura', amount: 80, date: '2026-10-12' }));
+    const analysis = await core.movements.analyzeImport.execute(csv2, {});
+    assert.equal(analysis.duplicateCount, 1);
+    assert.equal(analysis.items[0].potentialDuplicate.isDuplicate, true);
+  });
+
   it('duas compras iguais no mesmo dia viram dois lançamentos', async () => {
     const { core } = await setupCore();
     const twice = 'date,title,amount\n2026-10-01,Cafe,5.00\n2026-10-01,Cafe,5.00\n';

@@ -5,8 +5,8 @@ import { FormScreen } from '../../components/FormScreen';
 import { MoneyInput } from '../../components/MoneyInput';
 import { ColorPicker } from '../../components/ColorPicker';
 import { confirm } from '../../components/confirm';
-import { createCategory, deleteCategory, getCategory, updateCategory } from '../../data/repositories/categories';
-import { TransactionType } from '../../data/types';
+import type { TransactionType } from '@myfinances/core';
+import { appSession } from '../../engine/session';
 
 export default function CategoryForm() {
   const params = useLocalSearchParams<{ id: string; type?: string }>();
@@ -22,15 +22,14 @@ export default function CategoryForm() {
 
   useEffect(() => {
     if (isNew) return;
-    getCategory(Number(params.id)).then((c) => {
-      if (!c) return;
+    appSession.core().categories.get.execute(params.id).then((c) => {
       setName(c.name);
       setDescription(c.description || '');
       setType(c.type);
       setColor(c.color || '#94a3b8');
       setIcon(c.icon || 'Tag');
       setLimit(Number(c.monthly_limit || 0));
-    });
+    }).catch((err) => setError(err?.message));
   }, [params.id, isNew]);
 
   const save = async () => {
@@ -38,8 +37,9 @@ export default function CategoryForm() {
     setSaving(true);
     try {
       const input = { name: name.trim(), description, type, color, icon, monthly_limit: limit || null };
-      if (isNew) await createCategory(input);
-      else await updateCategory(Number(params.id), input);
+      const core = appSession.core();
+      if (isNew) await core.categories.create.execute(input);
+      else await core.categories.update.execute(params.id, input);
       router.back();
     } catch (err: any) {
       setError(err?.message || 'Erro ao salvar');
@@ -50,8 +50,12 @@ export default function CategoryForm() {
 
   const remove = async () => {
     if (await confirm('Excluir categoria', `Excluir "${name}"? Os lançamentos ficarão sem categoria.`)) {
-      await deleteCategory(Number(params.id));
-      router.back();
+      try {
+        await appSession.core().categories.remove.execute(params.id);
+        router.back();
+      } catch (err: any) {
+        setError(err?.message || 'Erro ao excluir');
+      }
     }
   };
 

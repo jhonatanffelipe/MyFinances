@@ -294,7 +294,11 @@ export class SupabasePairingFunction implements PairingFunction {
   async status(pairToken: string): Promise<PairingStatus> {
     const { status, data } = await this.call({ action: 'status', token: pairToken });
     if (status !== 200) throw new AppError('VALIDATION', `Falha ao consultar o pareamento (${data?.error ?? status})`);
-    if (data.status === 'APPROVED') return { status: 'APPROVED', tokenHash: data.token_hash, email: data.email };
+    if (data.status === 'APPROVED') {
+      // Função antiga (antes da correção da corrida): "APPROVED" sem token = ainda não consumido
+      if (!data.token_hash) return { status: 'WAITING_APPROVAL' };
+      return { status: 'APPROVED', tokenHash: data.token_hash, email: data.email };
+    }
     return { status: data.status };
   }
 }

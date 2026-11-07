@@ -2,6 +2,7 @@ import React from 'react';
 import { Tabs } from 'expo-router';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { COLORS } from '../../theme/tokens';
+import { FamilyHeader } from '../../components/FamilyHeader';
 
 const icon = (name: keyof typeof MaterialCommunityIcons.glyphMap) =>
   function TabIcon({ color, size }: { color: unknown; size: number }) {
@@ -18,6 +19,7 @@ export default function TabsLayout() {
         headerTitleStyle: { fontWeight: '800', color: COLORS.ink },
         headerShadowVisible: false,
         sceneStyle: { backgroundColor: COLORS.canvas },
+        headerRight: () => <FamilyHeader />,
       }}
     >
       <Tabs.Screen name="index" options={{ title: 'Dashboard', tabBarIcon: icon('view-dashboard-outline') }} />

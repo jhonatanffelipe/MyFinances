@@ -95,7 +95,10 @@ Deno.serve(async (req) => {
         .select('status, expires_at')
         .eq('token_hash', tokenHash)
         .maybeSingle();
-      if (!row || row.expires_at <= now) return json({ status: 'EXPIRED' });
+      if (!row || Date.parse(row.expires_at) <= Date.parse(now)) return json({ status: 'EXPIRED' });
+      // Aprovado entre o UPDATE acima e este SELECT (o computador clicou "Permitir" no meio
+      // da consulta): ainda não foi consumido aqui, então o celular consulta de novo.
+      if (row.status === 'APPROVED') return json({ status: 'WAITING_APPROVAL' });
       return json({ status: row.status }); // WAITING_APPROVAL | DENIED | CONSUMED
     }
 

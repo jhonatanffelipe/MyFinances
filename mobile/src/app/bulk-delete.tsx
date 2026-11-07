@@ -6,10 +6,8 @@ import { FormScreen } from '../components/FormScreen';
 import { PickerField } from '../components/PickerField';
 import { MonthSelector } from '../components/MonthSelector';
 import { confirm } from '../components/confirm';
-import { defaultYearMonth, yearMonthLabel } from '../data/date';
-import { BulkDeletePreview, bulkDeleteCard, previewBulkDeleteCard } from '../data/repositories/movements';
-import { listCreditCards } from '../data/repositories/creditCards';
-import { CreditCard } from '../data/types';
+import { defaultYearMonth, yearMonthLabel, type BulkDeletePreview, type CreditCard } from '@myfinances/core';
+import { appSession } from '../engine/session';
 import { formatCurrency } from '../utils/format';
 import { COLORS } from '../theme/tokens';
 
@@ -17,7 +15,7 @@ import { COLORS } from '../theme/tokens';
 export default function BulkDelete() {
   const params = useLocalSearchParams<{ cardId?: string; yearMonth?: string }>();
   const [cards, setCards] = useState<CreditCard[]>([]);
-  const [cardId, setCardId] = useState<number | null>(params.cardId ? Number(params.cardId) : null);
+  const [cardId, setCardId] = useState<string | null>(params.cardId || null);
   const [yearMonth, setYearMonth] = useState(params.yearMonth && /^\d{4}-\d{2}$/.test(params.yearMonth) ? params.yearMonth : defaultYearMonth());
   const [preview, setPreview] = useState<BulkDeletePreview | null>(null);
   const [loading, setLoading] = useState(false);
@@ -25,7 +23,7 @@ export default function BulkDelete() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    listCreditCards().then((list) => {
+    appSession.core().creditCards.list.execute({ perPage: 9999 }).then(({ data: list }) => {
       setCards(list);
       if (!cardId && list[0]) setCardId(list[0].id);
     });
@@ -35,7 +33,7 @@ export default function BulkDelete() {
     if (!cardId) return setPreview(null);
     let cancelled = false;
     setLoading(true);
-    previewBulkDeleteCard(cardId, yearMonth)
+    appSession.core().movements.previewBulkDeleteCard.execute(cardId, yearMonth)
       .then((p) => !cancelled && setPreview(p))
       .catch((err) => !cancelled && setError(err?.message))
       .finally(() => !cancelled && setLoading(false));
@@ -48,10 +46,11 @@ export default function BulkDelete() {
 
   const run = async () => {
     if (!cardId || !preview?.count) return;
-    if (!(await confirm('Confirmar exclusão', `Excluir ${preview.count} lançamento(s) de ${card?.description} em ${yearMonthLabel(yearMonth)}? Não é possível desfazer.`))) return;
+    const owners = preview.members.map((m) => `${m.name ?? 'membro desconhecido'} (${m.count})`).join(', ');
+    if (!(await confirm('Confirmar exclusão', `Excluir ${preview.count} lançamento(s) de ${card?.description} em ${yearMonthLabel(yearMonth)}, de ${owners}? Some para todos os membros e não é possível desfazer.`))) return;
     setSaving(true);
     try {
-      await bulkDeleteCard(cardId, yearMonth);
+      await appSession.core().movements.bulkDeleteCard.execute(cardId, yearMonth);
       router.back();
     } catch (err: any) {
       setError(err?.message || 'Erro ao excluir');
@@ -62,7 +61,7 @@ export default function BulkDelete() {
 
   return (
     <FormScreen error={error} saving={saving} onSave={run} saveLabel={preview?.count ? `Excluir ${preview.count} lançamento(s)` : 'Excluir'}>
-      <PickerField label="Cartão" value={cardId} onChange={setCardId} options={cards.map((c) => ({ value: c.id, label: c.description, color: c.color }))} />
+      <PickerField label="Cartão" value={cardId} onChange={setCardId} options={cards.map((c) => ({ value: c.id, label: c.description, color: c.color ?? undefined }))} />
       <MonthSelector value={yearMonth} onChange={setYearMonth} />
       <View style={styles.preview}>
         {loading ? (
@@ -76,6 +75,9 @@ export default function BulkDelete() {
               Saídas: {formatCurrency(preview.totalExpense)}
               {preview.totalIncome > 0 ? ` · Entradas: ${formatCurrency(preview.totalIncome)}` : ''}
             </Text>
+            {preview.members.length > 0 ? (
+              <Text style={styles.text}>De: {preview.members.map((m) => `${m.name ?? 'membro desconhecido'} (${m.count})`).join(', ')}</Text>
+            ) : null}
             {preview.fixedCount > 0 ? <Text style={{ color: '#b45309' }}>Inclui {preview.fixedCount} gerado(s) por despesas fixas.</Text> : null}
           </>
         ) : (

@@ -7,11 +7,8 @@ import { Button, Checkbox, HelperText, SegmentedButtons, Text } from 'react-nati
 import { PickerField } from '../components/PickerField';
 import { Badge } from '../components/Badge';
 import { DateField } from '../components/DateField';
-import { listCreditCards } from '../data/repositories/creditCards';
-import { listCategories } from '../data/repositories/categories';
-import { ImportAnalysis, analyzeImport, executeImport } from '../data/repositories/importer';
-import { Category, CreditCard } from '../data/types';
-import { ImportBankType } from '../services/importTypes';
+import type { Category, CreditCard, ImportAnalysis, ImportBankType } from '@myfinances/core';
+import { appSession } from '../engine/session';
 import { formatCurrency, isoToBr } from '../utils/format';
 import { COLORS } from '../theme/tokens';
 
@@ -19,7 +16,7 @@ import { COLORS } from '../theme/tokens';
 export default function ImportScreen() {
   const [cards, setCards] = useState<CreditCard[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [cardId, setCardId] = useState<number | null>(null);
+  const [cardId, setCardId] = useState<string | null>(null);
   const [bank, setBank] = useState<ImportBankType>('AUTO');
   const [file, setFile] = useState<{ name: string; content: string } | null>(null);
   const [analysis, setAnalysis] = useState<ImportAnalysis | null>(null);
@@ -27,14 +24,17 @@ export default function ImportScreen() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    listCreditCards(true).then(setCards);
-    listCategories().then(setCategories);
+    const core = appSession.core();
+    core.creditCards.list.execute({ onlyActive: true, perPage: 9999 }).then((r) => setCards(r.data));
+    core.categories.list.execute({ perPage: 9999 }).then((r) => setCategories(r.data));
   }, []);
 
   useEffect(() => {
     if (!file) return;
     setBusy(true);
-    analyzeImport(file.content, { fileName: file.name, creditCardId: cardId, bankType: bank })
+    appSession
+      .core()
+      .movements.analyzeImport.execute(file.content, { fileName: file.name, creditCardId: cardId, bankType: bank })
       .then(setAnalysis)
       .catch((err) => setError(err?.message || 'Não foi possível ler o arquivo'))
       .finally(() => setBusy(false));
@@ -66,7 +66,7 @@ export default function ImportScreen() {
     if (!analysis) return;
     setBusy(true);
     try {
-      await executeImport(analysis.items, cardId);
+      await appSession.core().movements.executeImport.execute(analysis.items, cardId);
       router.back();
     } catch (err: any) {
       setError(err?.message || 'Erro ao importar');
@@ -83,7 +83,7 @@ export default function ImportScreen() {
         onChange={setCardId}
         allowEmpty
         emptyLabel="Sem cartão (extrato)"
-        options={cards.map((c) => ({ value: c.id, label: c.description, color: c.color }))}
+        options={cards.map((c) => ({ value: c.id, label: c.description, color: c.color ?? undefined }))}
       />
       <SegmentedButtons
         value={bank}
@@ -131,7 +131,7 @@ export default function ImportScreen() {
                 </Text>
                 <View style={styles.meta}>
                   <Text style={styles.small}>{isoToBr(item.originalDate || item.date)}</Text>
-                  {cat ? <Badge label={cat.name} color={cat.color} /> : <Badge label="Sem categoria" />}
+                  {cat ? <Badge label={cat.name} color={cat.color ?? undefined} /> : <Badge label="Sem categoria" />}
                   {item.isInvoicePayment ? <Badge label="Pagamento de fatura" color={COLORS.blue} /> : null}
                 </View>
                 {item.potentialDuplicate.isDuplicate ? <Text style={styles.dup}>{item.potentialDuplicate.reason}</Text> : null}

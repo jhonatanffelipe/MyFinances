@@ -7,15 +7,15 @@ import { MonthSelector } from '../../components/MonthSelector';
 import { Badge } from '../../components/Badge';
 import { EmptyState } from '../../components/EmptyState';
 import { confirm } from '../../components/confirm';
+import { ViewChips } from '../../components/ViewChips';
 import { useData } from '../../hooks/useData';
-import { defaultYearMonth, formatDate, resolveYearMonth } from '../../data/date';
-import { deleteMovement, listMovements } from '../../data/repositories/movements';
-import { listCreditCards } from '../../data/repositories/creditCards';
-import { Movement } from '../../data/types';
+import { useAppState } from '../../contexts/AppStateContext';
+import { appSession } from '../../engine/session';
+import { defaultYearMonth, formatDate, resolveYearMonth, type Movement } from '@myfinances/core';
 import { formatCurrency, signedCurrency } from '../../utils/format';
 import { COLORS } from '../../theme/tokens';
 
-type CardFilter = 'all' | 'none' | number;
+type CardFilter = 'all' | 'none' | string;
 
 function MovementRow({ m, onPress, onLongPress, nested }: { m: Movement; onPress: () => void; onLongPress?: () => void; nested?: boolean }) {
   return (
@@ -26,11 +26,20 @@ function MovementRow({ m, onPress, onLongPress, nested }: { m: Movement; onPress
         </Text>
         <View style={styles.meta}>
           <Text style={styles.date}>{formatDate(m.date)}</Text>
-          <Badge label={m.category_name || 'Sem categoria'} color={m.category_color || '#64748b'} />
+          {m.type === 'TRANSFER' ? (
+            <Badge label={`${m.member_name ?? '?'} → ${m.to_member_name ?? '?'}`} color={COLORS.blue} />
+          ) : (
+            <>
+              <Badge label={m.category_name || 'Sem categoria'} color={m.category_color || '#64748b'} />
+              {m.member_name ? <Text style={styles.date}>{m.member_name.split(' ')[0]}</Text> : null}
+            </>
+          )}
           {!nested && m.credit_card_name ? <Badge label={m.credit_card_name} color={m.credit_card_color || COLORS.violet} dot={false} /> : null}
         </View>
       </View>
-      <Text style={[styles.amount, { color: m.type === 'INCOME' ? COLORS.brandDark : COLORS.ink }]}>{signedCurrency(m.amount, m.type)}</Text>
+      <Text style={[styles.amount, { color: m.type === 'INCOME' ? COLORS.brandDark : m.type === 'TRANSFER' ? COLORS.blue : COLORS.ink }]}>
+        {signedCurrency(m.amount, m.type)}
+      </Text>
     </Pressable>
   );
 }
@@ -39,23 +48,26 @@ export default function Movements() {
   const [yearMonth, setYearMonth] = useState(defaultYearMonth());
   const [search, setSearch] = useState('');
   const [cardFilter, setCardFilter] = useState<CardFilter>('all');
-  const [typeFilter, setTypeFilter] = useState<'ALL' | 'INCOME' | 'EXPENSE'>('ALL');
+  const [typeFilter, setTypeFilter] = useState<'ALL' | 'INCOME' | 'EXPENSE' | 'TRANSFER'>('ALL');
+  const { viewMemberId, notify } = useAppState();
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [fabOpen, setFabOpen] = useState(false);
   const [invoiceMenu, setInvoiceMenu] = useState<Movement | null>(null);
 
   const period = resolveYearMonth(yearMonth);
-  const { data: cards } = useData(() => listCreditCards(), []);
+  const { data: cards } = useData(async (core) => (await core.creditCards.list.execute({ perPage: 9999 })).data, []);
   const { data, loading, reload } = useData(
-    () =>
-      listMovements({
+    (core) =>
+      core.movements.list.execute({
         startDate: period.start,
         endDate: period.end,
         search: search.trim() || undefined,
         type: typeFilter,
         creditCardId: cardFilter === 'all' ? undefined : cardFilter,
+        memberId: viewMemberId ?? undefined,
+        perPage: 9999,
       }),
-    [period.start, period.end, search, cardFilter, typeFilter]
+    [period.start, period.end, search, cardFilter, typeFilter, viewMemberId]
   );
 
   const toggle = (key: string) =>
@@ -67,9 +79,14 @@ export default function Movements() {
     });
 
   const askDelete = async (m: Movement) => {
-    if (await confirm('Excluir movimentação', `Excluir "${m.description}"?`)) {
-      await deleteMovement(m.id);
-      reload();
+    const owner = m.type === 'TRANSFER' ? `${m.member_name ?? '?'} para ${m.to_member_name ?? '?'}` : m.member_name ?? 'membro desconhecido';
+    if (await confirm('Excluir movimentação', `Excluir "${m.description}" (${formatCurrency(m.amount)}) de ${owner}? Some para todos os membros da família.`)) {
+      try {
+        await appSession.core().movements.remove.execute(m.id);
+        reload();
+      } catch (err: any) {
+        notify(err?.message ?? 'Não foi possível excluir');
+      }
     }
   };
 
@@ -78,6 +95,7 @@ export default function Movements() {
   return (
     <View style={{ flex: 1 }}>
       <Screen refreshing={loading && Boolean(data)} onRefresh={reload} bottomInset={96}>
+        <ViewChips />
         <MonthSelector value={yearMonth} onChange={setYearMonth} />
         <Searchbar placeholder="Buscar descrição ou anotação" value={search} onChangeText={setSearch} style={styles.search} inputStyle={{ fontSize: 14 }} />
 
@@ -95,9 +113,9 @@ export default function Movements() {
           ))}
         </ScrollView>
         <View style={styles.chips}>
-          {(['ALL', 'INCOME', 'EXPENSE'] as const).map((t) => (
+          {(['ALL', 'INCOME', 'EXPENSE', 'TRANSFER'] as const).map((t) => (
             <Chip key={t} selected={typeFilter === t} onPress={() => setTypeFilter(t)} compact>
-              {t === 'ALL' ? 'Todos os tipos' : t === 'INCOME' ? 'Entradas' : 'Saídas'}
+              {t === 'ALL' ? 'Todos os tipos' : t === 'INCOME' ? 'Entradas' : t === 'EXPENSE' ? 'Saídas' : 'Transferências'}
             </Chip>
           ))}
         </View>

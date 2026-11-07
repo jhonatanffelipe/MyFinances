@@ -1,5 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { ConfirmDialog } from '../components/ConfirmDialog';
+import { IDLE_SYNC_STATUS, INITIAL_APP_STATE } from '@myfinances/core';
 import type { AppState, PairingRequestView, SyncStatusView } from '../interfaces/AppBridge';
 
 interface AppStateContextValue {
@@ -28,34 +29,12 @@ interface AppStateContextValue {
   setViewMemberId: (memberId: string | null) => void;
 }
 
-const LOADING: AppState = {
-  phase: 'loading',
-  connection: null,
-  user: null,
-  families: [],
-  activeFamilyId: null,
-  role: null,
-  members: [],
-  pendingInvite: null,
-  online: true,
-};
-
-const IDLE_SYNC: SyncStatusView = {
-  phase: 'idle',
-  pending: 0,
-  failed: 0,
-  lastSyncAt: null,
-  lastError: null,
-  lastConflicts: 0,
-  pulledRows: 0,
-};
-
 const AppStateContext = createContext<AppStateContextValue | undefined>(undefined);
 
 /** Estado da v2 vindo do processo main: fase (conectar/login/família/pronto), usuário, família e sync. */
 export function AppStateProvider({ children }: { children: React.ReactNode }) {
-  const [state, setState] = useState<AppState>(LOADING);
-  const [sync, setSync] = useState<SyncStatusView>(IDLE_SYNC);
+  const [state, setState] = useState<AppState>(INITIAL_APP_STATE);
+  const [sync, setSync] = useState<SyncStatusView>(IDLE_SYNC_STATUS);
   const [dataVersion, setDataVersion] = useState(0);
   const [pairingRequest, setPairingRequest] = useState<PairingRequestView | null>(null);
   const [view, setView] = useState<{ familyId: string | null; memberId: string | null }>({ familyId: null, memberId: null });

@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { IconButton, Text } from 'react-native-paper';
-import { shiftYearMonth, yearMonthLabel } from '../data/date';
+import { shiftYearMonth, yearMonthLabel } from '@myfinances/core';
 import { COLORS } from '../theme/tokens';
 
 export function MonthSelector({ value, onChange }: { value: string; onChange: (ym: string) => void }) {

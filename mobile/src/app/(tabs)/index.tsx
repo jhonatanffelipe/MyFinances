@@ -6,11 +6,21 @@ import { Screen } from '../../components/Screen';
 import { Card } from '../../components/Card';
 import { MonthSelector } from '../../components/MonthSelector';
 import { EmptyState } from '../../components/EmptyState';
+import { ViewChips } from '../../components/ViewChips';
+import { MemberAvatar } from '../../components/MemberAvatar';
 import { useData } from '../../hooks/useData';
-import { defaultYearMonth } from '../../data/date';
-import { getDashboardData } from '../../data/repositories/dashboard';
+import { useAppState } from '../../contexts/AppStateContext';
+import { defaultYearMonth, type DashboardData } from '@myfinances/core';
 import { formatCurrency } from '../../utils/format';
 import { COLORS } from '../../theme/tokens';
+
+/** Rótulos dos KPIs conforme a visão: "Saldo da família" / "Seu saldo" / "Saldo de Beto". */
+function viewLabels(view: DashboardData['view'], myId: string | undefined) {
+  if (!view.memberId) return { balance: 'Saldo da família', income: 'Receitas da família', expense: 'Despesas da família' };
+  if (view.memberId === myId) return { balance: 'Seu saldo', income: 'Suas receitas', expense: 'Suas despesas' };
+  const name = view.memberName?.split(' ')[0] ?? 'membro';
+  return { balance: `Saldo de ${name}`, income: `Receitas de ${name}`, expense: `Despesas de ${name}` };
+}
 
 function Kpi({ label, value, trend, icon, color, invertTrend }: { label: string; value: number; trend?: number; icon: string; color: string; invertTrend?: boolean }) {
   const up = (trend || 0) >= 0;
@@ -35,7 +45,7 @@ function Kpi({ label, value, trend, icon, color, invertTrend }: { label: string;
   );
 }
 
-function BarList({ items }: { items: { id: number; label: string; value: number; color: string }[] }) {
+function BarList({ items }: { items: { id: string; label: string; value: number; color: string }[] }) {
   const max = Math.max(...items.map((i) => i.value), 1);
   if (items.length === 0) return <EmptyState icon="chart-bar" message="Sem despesas no mês." />;
   return (
@@ -59,20 +69,53 @@ function BarList({ items }: { items: { id: number; label: string; value: number;
 
 export default function Dashboard() {
   const [yearMonth, setYearMonth] = useState(defaultYearMonth());
-  const { data, loading, reload } = useData(() => getDashboardData(yearMonth), [yearMonth]);
+  const { state, viewMemberId } = useAppState();
+  const { data, loading, reload } = useData((core) => core.dashboard.get.execute(yearMonth, { memberId: viewMemberId }), [yearMonth, viewMemberId]);
+  const labels = data ? viewLabels(data.view, state.user?.id) : null;
   const maxHistory = Math.max(...(data?.monthlyHistory || []).flatMap((m) => [m.income, m.expense]), 1);
 
   return (
     <Screen refreshing={loading && Boolean(data)} onRefresh={reload}>
+      <ViewChips />
       <MonthSelector value={yearMonth} onChange={setYearMonth} />
-      {data ? (
+      {data && labels ? (
         <>
           <View style={styles.kpiGrid}>
-            <Kpi label="Saldo total" value={data.totalBalance} trend={data.balanceTrend} icon="wallet-outline" color={COLORS.ink} />
-            <Kpi label="Receitas do mês" value={data.monthIncome} trend={data.incomeTrend} icon="arrow-down-circle-outline" color={COLORS.brand} />
-            <Kpi label="Despesas do mês" value={data.monthExpense} trend={data.expenseTrend} icon="arrow-up-circle-outline" color={COLORS.danger} invertTrend />
+            <Kpi label={labels.balance} value={data.totalBalance} trend={data.balanceTrend} icon="wallet-outline" color={COLORS.ink} />
+            <Kpi label={labels.income} value={data.monthIncome} trend={data.incomeTrend} icon="arrow-down-circle-outline" color={COLORS.brand} />
+            <Kpi label={labels.expense} value={data.monthExpense} trend={data.expenseTrend} icon="arrow-up-circle-outline" color={COLORS.danger} invertTrend />
             <Kpi label="Despesas fixas" value={data.fixedExpensesTotal} icon="calendar-sync-outline" color={COLORS.violet} />
           </View>
+
+          {data.view.memberId && (data.transferIn > 0 || data.transferOut > 0) ? (
+            <View style={styles.transfer}>
+              <Icon source="swap-horizontal" size={18} color={COLORS.blue} />
+              <Text style={styles.transferText}>
+                Transferências no mês: recebeu {formatCurrency(data.transferIn)} e enviou {formatCurrency(data.transferOut)}. Entram no saldo, mas não em receitas e despesas.
+              </Text>
+            </View>
+          ) : null}
+
+          {state.members.length > 1 ? (
+            <Card title="Por membro">
+              {data.byMember.length === 0 ? (
+                <EmptyState icon="account-group-outline" message="Nenhum lançamento no mês." />
+              ) : (
+                data.byMember.map((m) => (
+                  <View key={m.memberId} style={[styles.memberRow, m.memberId === data.view.memberId && styles.memberActive]}>
+                    <MemberAvatar name={m.name} size={26} />
+                    <Text style={styles.memberName} numberOfLines={1}>
+                      {m.name}
+                    </Text>
+                    <View style={{ alignItems: 'flex-end' }}>
+                      <Text style={[styles.memberValue, { color: COLORS.brandDark }]}>+{formatCurrency(m.income)}</Text>
+                      <Text style={styles.memberValue}>-{formatCurrency(m.expense)}</Text>
+                    </View>
+                  </View>
+                ))
+              )}
+            </Card>
+          ) : null}
 
           <Card title="Receitas x despesas (5 meses)">
             <View style={styles.chart}>
@@ -112,7 +155,9 @@ export default function Dashboard() {
                     <Text style={[styles.fixedName, f.paid ? styles.paid : null]} numberOfLines={1}>
                       {f.description}
                     </Text>
-                    <Text style={styles.fixedDate}>Vence em {f.formattedDueDate}</Text>
+                    <Text style={styles.fixedDate}>
+                      Vence em {f.formattedDueDate} · {f.member_name ?? 'Família'}
+                    </Text>
                   </View>
                   <Text style={styles.fixedValue}>{formatCurrency(f.amount)}</Text>
                 </View>
@@ -151,4 +196,10 @@ const styles = StyleSheet.create({
   paid: { textDecorationLine: 'line-through', color: COLORS.inkFaint },
   fixedDate: { color: COLORS.inkFaint, fontSize: 11 },
   fixedValue: { fontWeight: '700', color: COLORS.ink },
+  transfer: { flexDirection: 'row', gap: 8, padding: 12, borderRadius: 14, backgroundColor: '#eff6ff', alignItems: 'flex-start' },
+  transferText: { flex: 1, color: '#1e40af', fontSize: 12 },
+  memberRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 6, paddingHorizontal: 4, borderRadius: 10 },
+  memberActive: { backgroundColor: COLORS.brandSoft },
+  memberName: { flex: 1, color: COLORS.ink, fontWeight: '600' },
+  memberValue: { fontWeight: '700', color: COLORS.ink, fontSize: 12 },
 });

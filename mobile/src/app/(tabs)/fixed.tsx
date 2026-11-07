@@ -7,17 +7,18 @@ import { MonthSelector } from '../../components/MonthSelector';
 import { Badge } from '../../components/Badge';
 import { EmptyState } from '../../components/EmptyState';
 import { useData } from '../../hooks/useData';
-import { defaultYearMonth, formatDate } from '../../data/date';
-import { RECURRENCE_LABEL, listFixedEntries, setFixedEntryPaid } from '../../data/repositories/fixedEntries';
-import { TransactionType } from '../../data/types';
-import { formatCurrency } from '../../utils/format';
+import { useAppState } from '../../contexts/AppStateContext';
+import { appSession } from '../../engine/session';
+import { defaultYearMonth, formatDate, type TransactionType } from '@myfinances/core';
+import { RECURRENCE_LABEL, formatCurrency } from '../../utils/format';
 import { COLORS } from '../../theme/tokens';
 
 /** Despesas e receitas fixas, com baixa (pago/recebido) do mês. */
 export default function Fixed() {
   const [type, setType] = useState<TransactionType>('EXPENSE');
   const [yearMonth, setYearMonth] = useState(defaultYearMonth());
-  const { data, loading, reload } = useData(() => listFixedEntries(type, yearMonth), [type, yearMonth]);
+  const { notify } = useAppState();
+  const { data, loading, reload } = useData(async (core) => (await core.fixedExpenses.list.execute({ type, yearMonth, perPage: 9999 })).data, [type, yearMonth]);
   const active = (data || []).filter((f) => f.active);
   const total = active.reduce((s, f) => s + Number(f.amount), 0);
   const paidTotal = active.filter((f) => f.paid).reduce((s, f) => s + Number(f.amount), 0);
@@ -51,8 +52,12 @@ export default function Fixed() {
                 color={COLORS.brand}
                 disabled={!f.active}
                 onPress={async () => {
-                  await setFixedEntryPaid(f.id, yearMonth, !f.paid);
-                  reload();
+                  try {
+                    await appSession.core().fixedExpenses.setPaid.execute(f.id, yearMonth, !f.paid);
+                    reload();
+                  } catch (err: any) {
+                    notify(err?.message ?? 'Não foi possível registrar a baixa');
+                  }
                 }}
               />
               <View style={{ flex: 1, gap: 3 }}>
@@ -61,9 +66,10 @@ export default function Fixed() {
                 </Text>
                 <View style={styles.meta}>
                   <Text style={styles.small}>
-                    Dia {f.due_day} · {RECURRENCE_LABEL[f.recurrence || 'MONTHLY']}
+                    Dia {f.due_day} · {RECURRENCE_LABEL[f.recurrence ?? 'MONTHLY']}
                     {f.end_date ? ` · até ${formatDate(f.end_date)}` : ''}
                     {!f.active ? ' · inativo' : ''}
+                    {f.member_name ? ` · ${f.member_name.split(' ')[0]}` : ''}
                   </Text>
                   {f.category_name ? <Badge label={f.category_name} color={f.category_color || '#64748b'} /> : null}
                   {f.credit_card_name ? <Badge label={f.credit_card_name} color={f.credit_card_color || COLORS.violet} dot={false} /> : null}

@@ -1,156 +1,98 @@
 import React, { useEffect, useState } from 'react';
-import { KeyboardAvoidingView, Platform, StyleSheet, View } from 'react-native';
-import { router } from 'expo-router';
-import { Button, Checkbox, HelperText, Icon, Text, TextInput } from 'react-native-paper';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { hasUsers, listUserNames, login, registerUser } from '../data/repositories/auth';
-import { confirm } from '../components/confirm';
-import { useSession } from '../contexts/SessionContext';
-import { useSync } from '../contexts/SyncContext';
-import { syncNow } from '../sync/syncManager';
-import { relativeTime } from '../utils/format';
+import { View } from 'react-native';
+import { Button, SegmentedButtons, Text, TextInput } from 'react-native-paper';
+import { ErrorText, InfoBox, OnboardingShell, useAction } from '../components/Onboarding';
+import { useAppState } from '../contexts/AppStateContext';
+import { appSession } from '../engine/session';
 import { COLORS } from '../theme/tokens';
 
-/** Login com os mesmos usuários do desktop (ou cadastro, se o banco ainda não tiver). */
+type Mode = 'login' | 'signup' | 'reset';
+
+/** Login, cadastro e "esqueci a senha" no Supabase Auth do banco conectado. */
 export default function Login() {
-  const { signIn } = useSession();
-  const { sync, dataVersion } = useSync();
-  const [mode, setMode] = useState<'login' | 'register' | null>(null);
+  const { state, apply } = useAppState();
+  const [mode, setMode] = useState<Mode>(state.pendingInvite ? 'signup' : 'login');
   const [name, setName] = useState('');
+  const [email, setEmail] = useState(state.loginHint?.email ?? '');
   const [password, setPassword] = useState('');
-  const [remember, setRemember] = useState(true);
-  const [busy, setBusy] = useState(false);
-  const [syncing, setSyncing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
+  const [info, setInfo] = useState<string | null>(null);
+  const action = useAction();
 
-  // Recarrega os usuários quando o banco é substituído pela versão do OneDrive
   useEffect(() => {
-    (async () => {
-      const exists = await hasUsers();
-      setMode(exists ? 'login' : 'register');
-      if (exists) {
-        const names = await listUserNames();
-        if (names.length === 1) setName(names[0]);
+    if (state.loginHint?.email) setEmail(state.loginHint.email);
+  }, [state.loginHint?.email]);
+
+  const submit = () =>
+    action.run(async () => {
+      setInfo(null);
+      if (mode === 'login') apply(await appSession.signIn(email, password));
+      else if (mode === 'signup') apply(await appSession.signUp(name, email, password));
+      else {
+        await appSession.requestPasswordReset(email);
+        setInfo('Se existir uma conta com esse e-mail, enviamos o link para criar uma senha nova.');
       }
-    })().catch((err) => setError(err?.message));
-  }, [dataVersion]);
-
-  /** Força a conferência com o OneDrive (ex.: senha alterada no computador). */
-  const forceSync = async () => {
-    setSyncing(true);
-    setError(null);
-    try {
-      await syncNow();
-    } catch (err: any) {
-      setError(err?.message || 'Falha ao sincronizar com o OneDrive');
-    } finally {
-      setSyncing(false);
-    }
-  };
-
-  /** Volta à escolha do arquivo; ao escolher, a cópia local é substituída pela do OneDrive. */
-  const pickAgain = async () => {
-    if (
-      sync.pendingUpload &&
-      !(await confirm(
-        'Selecionar o arquivo novamente',
-        'Há alterações deste celular que ainda não foram enviadas ao OneDrive. Ao escolher o arquivo, elas serão descartadas.',
-        'Continuar'
-      ))
-    ) {
-      return;
-    }
-    router.push('/onboarding/pick');
-  };
-
-  const submit = async () => {
-    setBusy(true);
-    setError(null);
-    try {
-      const res = mode === 'register' ? await registerUser(name, password) : await login(name, password);
-      if (!res.success || !res.user) {
-        setError(res.error || 'Não foi possível entrar');
-        return;
-      }
-      await signIn(res.user, remember);
-      router.replace('/(tabs)');
-    } catch (err: any) {
-      setError(err?.message || 'Erro ao entrar');
-    } finally {
-      setBusy(false);
-    }
-  };
+    });
 
   return (
-    <SafeAreaView style={styles.root}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.inner}>
-        <View style={styles.hero}>
-          <View style={styles.logo}>
-            <Icon source="wallet" size={34} color="#fff" />
-          </View>
-          <Text variant="headlineSmall" style={styles.title}>
-            {mode === 'register' ? 'Crie seu usuário' : 'Bem-vindo de volta'}
-          </Text>
-          <Text variant="bodyMedium" style={styles.subtitle}>
-            {mode === 'register'
-              ? 'Este banco ainda não tem usuário. O mesmo login valerá no computador.'
-              : 'Entre com o mesmo usuário e senha do MyFinances desktop.'}
-          </Text>
-        </View>
-        <View style={styles.form}>
-          <TextInput mode="outlined" label="Usuário" value={name} onChangeText={setName} autoCapitalize="none" />
-          <TextInput mode="outlined" label="Senha" value={password} onChangeText={setPassword} secureTextEntry onSubmitEditing={submit} />
-          <Checkbox.Item
-            label="Manter conectado neste celular"
-            status={remember ? 'checked' : 'unchecked'}
-            onPress={() => setRemember(!remember)}
-            mode="android"
-            position="leading"
-            labelStyle={{ textAlign: 'left' }}
-            style={{ paddingHorizontal: 0 }}
-          />
-          {error ? (
-            <HelperText type="error" visible>
-              {error}
-            </HelperText>
-          ) : null}
-          <Button mode="contained" onPress={submit} loading={busy} disabled={busy || !mode} contentStyle={{ paddingVertical: 6 }}>
-            {mode === 'register' ? 'Criar e entrar' : 'Entrar'}
-          </Button>
-          {busy && mode === 'login' ? (
-            <Text variant="bodySmall" style={styles.hint}>
-              Verificando a senha (pode levar alguns segundos no celular)…
-            </Text>
-          ) : null}
-          {sync.remote ? (
-            <View style={styles.sync}>
-              <Button mode="text" icon="sync" onPress={forceSync} loading={syncing} disabled={syncing || busy}>
-                Sincronizar com o OneDrive
-              </Button>
-              <Text variant="bodySmall" style={styles.hint}>
-                Última sincronização {relativeTime(sync.lastSyncAt)}
-              </Text>
-            </View>
-          ) : null}
-          {sync.signedIn ? (
-            <Button mode="text" icon="folder-search-outline" onPress={pickAgain} disabled={syncing || busy}>
-              Selecionar o arquivo novamente
-            </Button>
-          ) : null}
-        </View>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+    <OnboardingShell
+      icon={mode === 'signup' ? 'account-plus-outline' : 'login'}
+      title={mode === 'signup' ? 'Criar sua conta' : mode === 'reset' ? 'Esqueci a senha' : 'Entrar no MyFinances'}
+      subtitle={mode === 'signup' ? 'Sua conta fica no banco conectado e serve para todos os seus aparelhos.' : 'Use o e-mail e a senha da sua conta.'}
+    >
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+        <Text style={{ flex: 1, color: COLORS.inkMuted, fontSize: 12 }} numberOfLines={1}>
+          Banco: {state.connection?.url}
+        </Text>
+        <Button compact onPress={() => action.run(async () => apply(await appSession.forgetConnection()))}>
+          Trocar
+        </Button>
+      </View>
+
+      {state.pendingInvite ? (
+        <InfoBox
+          tone="success"
+          icon="ticket-outline"
+          text={`Convite de ${state.pendingInvite.by ?? 'um membro'} para a família ${state.pendingInvite.familyName ?? ''}. Entre ou crie sua conta para aceitar.`}
+        />
+      ) : null}
+      {state.loginHint ? <InfoBox icon="key-outline" text="Digite a sua senha uma vez para conectar este celular." /> : null}
+
+      {mode !== 'reset' ? (
+        <SegmentedButtons
+          value={mode}
+          onValueChange={(v) => {
+            setMode(v as Mode);
+            action.setError(null);
+          }}
+          buttons={[
+            { value: 'login', label: 'Entrar' },
+            { value: 'signup', label: 'Criar conta' },
+          ]}
+        />
+      ) : null}
+
+      {mode === 'signup' ? <TextInput mode="outlined" label="Seu nome" value={name} onChangeText={setName} placeholder="Como a família te chama" /> : null}
+      <TextInput mode="outlined" label="E-mail" value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" autoComplete="email" />
+      {mode !== 'reset' ? (
+        <TextInput
+          mode="outlined"
+          label="Senha"
+          value={password}
+          onChangeText={setPassword}
+          secureTextEntry={!showPassword}
+          autoCapitalize="none"
+          right={<TextInput.Icon icon={showPassword ? 'eye-off' : 'eye'} onPress={() => setShowPassword(!showPassword)} />}
+        />
+      ) : null}
+      {info ? <InfoBox tone="success" icon="email-check-outline" text={info} /> : null}
+      <ErrorText message={action.error} />
+
+      <Button mode="contained" loading={action.loading} disabled={action.loading} onPress={submit} contentStyle={{ paddingVertical: 6 }}>
+        {mode === 'login' ? 'Entrar' : mode === 'signup' ? 'Criar conta' : 'Enviar link'}
+      </Button>
+      {mode === 'login' ? <Button onPress={() => setMode('reset')}>Esqueci a senha</Button> : null}
+      {mode === 'reset' ? <Button onPress={() => setMode('login')}>Voltar para o login</Button> : null}
+    </OnboardingShell>
   );
 }
-
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: COLORS.canvas },
-  inner: { flex: 1, padding: 24, justifyContent: 'center', gap: 28 },
-  hero: { alignItems: 'center', gap: 10 },
-  logo: { width: 64, height: 64, borderRadius: 18, backgroundColor: COLORS.brand, alignItems: 'center', justifyContent: 'center' },
-  title: { fontWeight: '800', color: COLORS.ink },
-  subtitle: { textAlign: 'center', color: COLORS.inkMuted },
-  form: { gap: 12 },
-  hint: { textAlign: 'center', color: COLORS.inkFaint },
-  sync: { alignItems: 'center', marginTop: 4 },
-});

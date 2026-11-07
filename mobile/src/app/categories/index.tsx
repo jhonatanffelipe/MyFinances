@@ -6,16 +6,14 @@ import { Screen } from '../../components/Screen';
 import { MonthSelector } from '../../components/MonthSelector';
 import { EmptyState } from '../../components/EmptyState';
 import { useData } from '../../hooks/useData';
-import { defaultYearMonth } from '../../data/date';
-import { listCategories } from '../../data/repositories/categories';
-import { TransactionType } from '../../data/types';
+import { defaultYearMonth, type TransactionType } from '@myfinances/core';
 import { formatCurrency } from '../../utils/format';
 import { COLORS } from '../../theme/tokens';
 
 export default function Categories() {
   const [type, setType] = useState<TransactionType>('EXPENSE');
   const [yearMonth, setYearMonth] = useState(defaultYearMonth());
-  const { data, loading, reload } = useData(() => listCategories({ type, yearMonth }), [type, yearMonth]);
+  const { data, loading, reload } = useData(async (core) => (await core.categories.list.execute({ type, yearMonth, perPage: 9999 })).data, [type, yearMonth]);
 
   return (
     <View style={{ flex: 1 }}>

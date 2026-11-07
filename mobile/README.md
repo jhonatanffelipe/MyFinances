@@ -1,77 +1,41 @@
 # MyFinances Mobile
 
-App Android (React Native + Expo) do MyFinances. Usa **o mesmo arquivo de banco** do
-desktop (`db_myfinances.sqlite`), guardado no **OneDrive**: o que você lança no celular
-aparece no computador e vice-versa.
+App Android (Expo / React Native) do MyFinances v2: os dados da **família** ficam num
+**SQLite local** do celular (funciona sem internet) e sincronizam com o **seu próprio
+projeto Supabase**, o mesmo usado pelo desktop.
 
-Projeto independente do desktop: tem seu próprio `package.json`, dependências e build.
+> Use **somente o Yarn** (v1, igual ao desktop). Para pacotes nativos do Expo use
+> `yarn expo install <pacote>`, que escolhe a versão compatível com o SDK.
 
-> Use **somente o Yarn** (v1, igual ao desktop) para instalar e rodar este projeto.
-> Para adicionar pacotes nativos do Expo use `yarn expo install <pacote>`, que escolhe
-> a versão compatível com o SDK.
+## Como funciona
 
-## Como funciona a sincronização
-
-1. Você entra com a conta Microsoft e escolhe o arquivo do banco no OneDrive.
-2. O app baixa uma cópia para o celular e trabalha nela (funciona sem internet).
-3. Cada alteração é enviada ao OneDrive (com ~1,5 s de espera para agrupar edições).
-   O envio só é aceito se o arquivo no OneDrive ainda for a versão que o app baixou
-   (`If-Match` com o eTag).
-4. Se o arquivo foi alterado no computador antes do envio, **nada é sobrescrito**: a
-   versão do celular é salva na mesma pasta como
-   `db_myfinances.conflito-celular-<data>.sqlite`, o app baixa a versão do OneDrive e
-   avisa para você conferir.
-5. Com o app aberto, ele confere o OneDrive a cada 30 s, ao voltar para o app e ao
-   puxar a tela para baixo.
-6. O arquivo `db_myfinances.sqlite.lock` (mesmo formato do desktop) avisa quando o banco
-   está aberto em outro dispositivo.
-
-O login de usuário é o mesmo do desktop (mesmo usuário e senha, verificados com scrypt).
+1. **Conectar:** no computador, abra Perfil → **Conectar celular** e toque em **Ler QR Code**
+   no celular. "Sou eu" entra na sua conta sem senha (o computador pede "Permitir");
+   "Sou outra pessoa" cria a conta da pessoa e já a coloca na família. Também dá para colar
+   um código de convite ou informar a URL e a publishable key manualmente.
+2. **Offline-first:** o app lê e grava sempre no SQLite local (`expo-sqlite`, um arquivo por
+   projeto + usuário). Sem internet, tudo funciona e as alterações ficam na fila.
+3. **Sincronização:** o `SyncEngine` do `packages/core` envia a fila e traz as alterações dos
+   outros membros. O Realtime do Supabase avisa quando alguém lança algo; ao voltar para o
+   app, ele renova a sessão e busca novidades; ao ir para segundo plano, envia o que falta.
+4. **Sessão segura:** a conexão e a sessão do Supabase ficam no `expo-secure-store`
+   (Keystore), divididas em pedaços quando passam do limite de ~2 KB.
 
 ## Funcionalidades
 
-- Dashboard: saldo, receitas, despesas, fixos, gráfico de 5 meses, despesas por
-  categoria e por cartão, baixa das despesas fixas do mês
-- Movimentações: navegação por mês, busca, filtro por cartão/tipo, faturas agrupadas por
-  cartão + mês (expansíveis), criar/editar/excluir, **excluir todos os lançamentos de um
-  cartão no mês**
-- Despesas e receitas fixas com recorrência (mensal a anual), geração dos movimentos do
-  período e baixa por mês
-- Categorias (com limite mensal) e cartões de crédito
-- Importação de fatura CSV do Nubank e do Banco Inter (mesmo parser do desktop)
+- Dashboard com visão **Família | Eu | membro**: saldo, receitas, despesas, card "Por
+  membro", transferências, gráfico de 5 meses, despesas por categoria e cartão e fixos do mês
+- Movimentações: mês, busca, filtros por cartão/tipo/membro, faturas agrupadas por cartão +
+  mês, **"De quem"** e **transferência entre membros**, exclusão em lote por cartão
+- Despesas e receitas fixas com responsável, recorrência e baixa por mês
+- Categorias (limite mensal da família), cartões e importação de fatura CSV (Nubank e Inter)
+- Seletor de família no topo, membros e convites, perfil, aparelhos conectados e tela de
+  sincronização (pendências recusadas: reenviar ou descartar)
 
-## 1. Registrar o app no Microsoft Entra (uma vez)
+## Rodar no celular (desenvolvimento)
 
-O login no OneDrive precisa de um "Client ID" gratuito:
-
-1. Acesse <https://portal.azure.com> → **Microsoft Entra ID** → **Registros de aplicativo**
-   → **Novo registro**.
-2. Nome: `MyFinances Mobile`.
-   Tipos de conta: **Contas em qualquer diretório organizacional e contas pessoais da
-   Microsoft**.
-3. Em **URI de redirecionamento**, escolha **Cliente público/nativo (móvel e área de
-   trabalho)** e informe:
-   `https://login.microsoftonline.com/common/oauth2/nativeclient` (aparece como sugestão)
-4. Após criar, copie o **ID do aplicativo (cliente)**.
-5. Em **Permissões de APIs**, confira que existem (delegadas, Microsoft Graph):
-   `User.Read`, `Files.ReadWrite` e `offline_access`. Não é preciso segredo.
-6. Cole o ID em `app.json`:
-
-   ```json
-   "extra": { "microsoftClientId": "SEU-CLIENT-ID-AQUI" }
-   ```
-
-## 2. Rodar no celular (desenvolvimento)
-
-### Login Microsoft (Expo Go e builds)
-
-O login abre numa WebView dentro do próprio app e intercepta o retorno para
-`https://login.microsoftonline.com/common/oauth2/nativeclient`. Por isso funciona igual
-no Expo Go e nos builds, sem depender de esquema próprio (`myfinances://`) nem do IP do
-Metro — no Android o navegador externo não devolvia o retorno ao app após "Continuar".
-
-Chave de acesso (passkey) não funciona dentro da WebView: escolha **Outras maneiras de
-entrar** e use senha, código por e-mail ou o Microsoft Authenticator.
+> Depois de mudar dependências nativas (ex.: `expo-camera`, `netinfo`), gere de novo a
+> pasta `android/` com `npx expo prebuild --clean` antes do build local.
 
 ### Opção A — development build pelo EAS (sem Android Studio)
 
@@ -118,26 +82,18 @@ O EAS compila na nuvem e devolve um link para baixar o `.apk` no celular.
 | `yarn dev:client` | Metro para o build de desenvolvimento (dev client) |
 | `yarn eas:apk` | Gera o APK de instalação na nuvem (EAS) |
 | `yarn typecheck` | Checagem de tipos |
-| `yarn test:data` | Testes da camada de dados (Node + sql.js) |
+
+As regras de negócio, a sincronização e os testes ficam no `packages/core`
+(`yarn core:test` na raiz).
 
 ## Estrutura
 
 ```
 src/
-  app/            telas (Expo Router)
-  data/           banco: schema, repositórios (mesmas regras do desktop)
-  services/       parser de faturas CSV
-  sync/           login Microsoft, Graph API, sincronização e presença
+  app/            telas (Expo Router): connect/ (QR, código, manual), login, family, (tabs)...
+  engine/         AppSession do core com expo-sqlite, NetInfo e supabase-js
+  contexts/       AppStateContext (fase, usuário, família, sync, visão)
+  connection/     store seguro (expo-secure-store)
   components/     componentes de interface
   theme/          cores do Figma
-tests/            testes da camada de dados
 ```
-
-## Cuidados
-
-- **Estrutura do banco:** `src/data/schema.ts` precisa ficar igual a
-  `desktop/electron/database/schema.ts`. Ao criar uma coluna/tabela num app, replique no outro.
-- **Edição simultânea:** a regra é "quem salva primeiro ganha"; a outra versão vira cópia de
-  conflito. Evite editar no celular e no computador ao mesmo tempo (o aviso amarelo ajuda).
-- **Login no celular:** a verificação da senha (scrypt) pode levar alguns segundos.
-  Marque "Manter conectado" para não precisar digitar sempre.

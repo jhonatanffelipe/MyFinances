@@ -4,10 +4,31 @@ export function formatCurrency(value: number | null | undefined) {
   return currency.format(Number(value || 0));
 }
 
-/** Valor com sinal conforme o tipo: "+ R$ 10,00" ou "- R$ 10,00". */
-export function signedCurrency(value: number, type: 'INCOME' | 'EXPENSE') {
-  return `${type === 'INCOME' ? '+' : '-'} ${formatCurrency(value)}`;
+/** Valor com sinal conforme o tipo: "+ R$ 10,00", "- R$ 10,00" ou "⇄ R$ 10,00" (transferência). */
+export function signedCurrency(value: number, type: 'INCOME' | 'EXPENSE' | 'TRANSFER') {
+  const sign = type === 'INCOME' ? '+' : type === 'TRANSFER' ? '⇄' : '-';
+  return `${sign} ${formatCurrency(value)}`;
 }
+
+/** Iniciais para o avatar: "Ana Souza" → "AS". */
+export function initials(name?: string | null) {
+  return (name || 'U')
+    .split(' ')
+    .filter(Boolean)
+    .map((w) => w[0])
+    .slice(0, 2)
+    .join('')
+    .toUpperCase();
+}
+
+/** Recorrência dos lançamentos fixos. */
+export const RECURRENCE_LABEL = {
+  MONTHLY: 'Mensal',
+  BIMONTHLY: 'Bimestral',
+  QUARTERLY: 'Trimestral',
+  SEMIANNUAL: 'Semestral',
+  ANNUAL: 'Anual',
+} as const;
 
 /** Converte o texto digitado num campo de dinheiro (apenas dígitos = centavos) em número. */
 export function centsTextToNumber(text: string) {

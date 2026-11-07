@@ -7,11 +7,10 @@ import { MoneyInput } from '../../components/MoneyInput';
 import { DateField } from '../../components/DateField';
 import { PickerField } from '../../components/PickerField';
 import { confirm } from '../../components/confirm';
-import { todayIso } from '../../data/date';
-import { RECURRENCE_LABEL, createFixedEntry, deleteFixedEntry, getFixedEntry, updateFixedEntry } from '../../data/repositories/fixedEntries';
-import { listCategories } from '../../data/repositories/categories';
-import { listCreditCards } from '../../data/repositories/creditCards';
-import { Category, CreditCard, FixedExpenseRecurrence, TransactionType } from '../../data/types';
+import { todayIso, type Category, type CreditCard, type FixedExpenseRecurrence, type TransactionType } from '@myfinances/core';
+import { useAppState } from '../../contexts/AppStateContext';
+import { appSession } from '../../engine/session';
+import { RECURRENCE_LABEL } from '../../utils/format';
 import { COLORS } from '../../theme/tokens';
 
 export default function FixedForm() {
@@ -24,8 +23,10 @@ export default function FixedForm() {
   const [recurrence, setRecurrence] = useState<FixedExpenseRecurrence>('MONTHLY');
   const [startDate, setStartDate] = useState<string | null>(todayIso());
   const [endDate, setEndDate] = useState<string | null>(null);
-  const [categoryId, setCategoryId] = useState<number | null>(null);
-  const [cardId, setCardId] = useState<number | null>(null);
+  const { state } = useAppState();
+  const [categoryId, setCategoryId] = useState<string | null>(null);
+  const [cardId, setCardId] = useState<string | null>(null);
+  const [memberId, setMemberId] = useState<string | null>(state.user?.id ?? null);
   const [active, setActive] = useState(true);
   const [notes, setNotes] = useState('');
   const [categories, setCategories] = useState<Category[]>([]);
@@ -36,11 +37,13 @@ export default function FixedForm() {
 
   useEffect(() => {
     (async () => {
-      setCategories(await listCategories());
-      setCards(await listCreditCards());
+      const core = appSession.core();
+      setCategories((await core.categories.list.execute({ perPage: 9999 })).data);
+      setCards((await core.creditCards.list.execute({ perPage: 9999 })).data);
       if (!isNew) {
-        const f = await getFixedEntry(Number(params.id));
+        const f = await core.fixedExpenses.get.execute(params.id);
         if (f) {
+          setMemberId(f.member_id ?? null);
           setType(f.type === 'INCOME' ? 'INCOME' : 'EXPENSE');
           setDescription(f.description);
           setAmount(Number(f.amount));
@@ -69,11 +72,12 @@ export default function FixedForm() {
     setError(null);
     try {
       const input = {
-        description: description.trim(), amount, type, category_id: categoryId, credit_card_id: isIncome ? null : cardId,
-        recurrence, due_day: day, start_date: startDate, end_date: endDate, active: active ? 1 : 0, notes,
+        description: description.trim(), amount, type, member_id: memberId, category_id: categoryId, credit_card_id: isIncome ? null : cardId,
+        recurrence, due_day: day, start_date: startDate, end_date: endDate, active, notes,
       };
-      if (isNew) await createFixedEntry(input);
-      else await updateFixedEntry(Number(params.id), input);
+      const core = appSession.core();
+      if (isNew) await core.fixedExpenses.create.execute(input);
+      else await core.fixedExpenses.update.execute(params.id, input);
       router.back();
     } catch (err: any) {
       setError(err?.message || 'Erro ao salvar');
@@ -84,8 +88,12 @@ export default function FixedForm() {
 
   const remove = async () => {
     if (await confirm('Excluir lançamento fixo', `Excluir "${description}" e os movimentos gerados por ele?`)) {
-      await deleteFixedEntry(Number(params.id));
-      router.back();
+      try {
+        await appSession.core().fixedExpenses.remove.execute(params.id);
+        router.back();
+      } catch (err: any) {
+        setError(err?.message || 'Erro ao excluir');
+      }
     }
   };
 
@@ -105,10 +113,20 @@ export default function FixedForm() {
         <DateField label="Início" value={startDate} onChange={setStartDate} />
         <DateField label="Fim (opcional — gera os movimentos do período)" value={endDate} onChange={setEndDate} clearable />
         <PickerField
+          label="De quem"
+          value={memberId}
+          onChange={setMemberId}
+          allowEmpty
+          emptyLabel="Ninguém em específico (família)"
+          options={state.members
+            .filter((m) => m.active || m.user_id === memberId)
+            .map((m) => ({ value: m.user_id, label: m.user_id === state.user?.id ? `${m.name} (você)` : m.name }))}
+        />
+        <PickerField
           label="Categoria"
           value={categoryId}
           onChange={setCategoryId}
-          options={categories.filter((c) => c.type === type).map((c) => ({ value: c.id, label: c.name, color: c.color }))}
+          options={categories.filter((c) => c.type === type).map((c) => ({ value: c.id, label: c.name, color: c.color ?? undefined }))}
         />
         {!isIncome ? (
           <PickerField
@@ -117,7 +135,7 @@ export default function FixedForm() {
             onChange={setCardId}
             allowEmpty
             emptyLabel="Sem cartão"
-            options={cards.map((c) => ({ value: c.id, label: c.description, color: c.color }))}
+            options={cards.map((c) => ({ value: c.id, label: c.description, color: c.color ?? undefined }))}
           />
         ) : null}
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>

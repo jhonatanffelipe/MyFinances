@@ -3,54 +3,18 @@
  * aparelhos e sincronização. (Os dados — categorias, lançamentos... — continuam
  * em IElectronBridge, com os mesmos canais da v1.)
  */
-export type AppPhase = 'loading' | 'connect' | 'login' | 'family' | 'ready';
-export type FamilyRole = 'OWNER' | 'ADMIN' | 'MEMBER';
+import type { AppState, PairingRequestView, SyncStatusView } from '@myfinances/core';
 
-export interface AppUserView {
-  id: string;
-  email: string;
-  name: string;
-  phone: string | null;
-  avatar_url: string | null;
-}
-
-export interface FamilyView {
-  id: string;
-  name: string;
-}
-
-export interface MemberView {
-  user_id: string;
-  name: string;
-  role: FamilyRole;
-  active: boolean;
-  avatar_url: string | null;
-}
-
-export interface AppState {
-  phase: AppPhase;
-  connection: { url: string; projectRef: string } | null;
-  user: AppUserView | null;
-  families: FamilyView[];
-  activeFamilyId: string | null;
-  role: FamilyRole | null;
-  members: MemberView[];
-  /** Convite recebido na tela Conectar, aplicado depois do login/cadastro. */
-  pendingInvite: { familyName: string | null; by: string | null } | null;
-  online: boolean;
-}
-
-export type SyncPhaseView = 'idle' | 'syncing' | 'offline' | 'error';
-
-export interface SyncStatusView {
-  phase: SyncPhaseView;
-  pending: number;
-  failed: number;
-  lastSyncAt: string | null;
-  lastError: string | null;
-  lastConflicts: number;
-  pulledRows: number;
-}
+export type {
+  AppPhase,
+  AppState,
+  AppUserView,
+  FamilyView,
+  MemberView,
+  PairingRequestView,
+  SyncStatusView,
+} from '@myfinances/core';
+export type { FamilyRole } from '@myfinances/core';
 
 export interface SyncFailedItem {
   id: number;
@@ -58,13 +22,6 @@ export interface SyncFailedItem {
   row_id: string;
   last_error: string;
   attempts: number;
-}
-
-export interface PairingRequestView {
-  id: string;
-  deviceName: string;
-  familyId: string;
-  expiresAt: string;
 }
 
 export interface DeviceView {
