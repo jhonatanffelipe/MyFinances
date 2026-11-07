@@ -49,6 +49,16 @@ Supabase), sem OneDrive. Pode rodar em paralelo às Etapas 6–7, depois da 5.
 - [ ] Perfil → **Conexão**: ver o projeto, testar, trocar (com logout) e esquecer.
 - [ ] supabase-js com `auth.storage = mobileSecureStore`.
 
+## Herdado da Etapa 5
+
+- [ ] Login, cadastro e "esqueci a senha"; ao abrir, `session.resume({ online })`.
+- [ ] Ler QR Code: `scan.decode` → "Sou eu" (`scan.execute` → `waitApproval` →
+  `completePairing`) ou "Sou outra pessoa" (cadastro/login → `families.join`).
+- [ ] Onboarding sem família, seletor de família no header, Membros, Perfil e Aparelhos
+  conectados.
+- [ ] `RegisterDevice` após o login (plataforma `android`/`ios`, nome via `expo-device`).
+- [ ] Remover `mobile/src/data/repositories/auth.ts` e a dependência `scrypt-js`.
+
 ## Pronto quando
 
 - Um lançamento feito no celular em modo avião aparece no desktop do outro membro assim que o

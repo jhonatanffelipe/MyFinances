@@ -7,7 +7,7 @@ aliases:
   - "Etapa 5"
   - "Autenticação e famílias"
 etapa: 5
-status: pendente
+status: concluída
 plano: "[[README|Plano v2.0.0]]"
 depende_de:
   - "[[etapa-03-sincronizacao]]"
@@ -18,68 +18,88 @@ depende_de:
 **Objetivo:** substituir o login local (nome + senha scrypt em `users`) pelo Supabase Auth e
 introduzir família, membros e convites.
 
+## Divisão do trabalho
+
+Mesmo critério da Etapa 4: a lógica fica no core, testada contra o Supabase local (Auth,
+RPCs e Edge Function reais). As telas e a remoção do login antigo entram quando cada app
+passar a rodar sobre o core: Etapa 6 no desktop e Etapa 8 no mobile.
+
+| Peça | Onde |
+|---|---|
+| Portas `AuthGateway`, `FamilyGateway`, `DeviceGateway`, `PairingFunction` | `packages/core/src/remote/gateways.ts` |
+| Implementação sobre o supabase-js (sem importar o pacote em runtime) e mapa de erros | `packages/core/src/remote/supabaseGateway.ts` |
+| Use cases de conta e sessão | `packages/core/src/use-cases/account.ts` |
+| Use cases de família e convite | `packages/core/src/use-cases/families.ts` |
+| Use cases do QR e dos aparelhos | `packages/core/src/use-cases/devices.ts` |
+| Raiz de composição | `packages/core/src/createAccount.ts` |
+
 ## Tarefas
 
 ### Auth
-- [ ] Cadastro (nome, e-mail, senha), login, logout e "esqueci a senha" via Supabase Auth. O
-  nome vai em `options.data.name`, e o trigger `handle_new_user` cria o `profiles`.
-- [ ] Senha mínima: o Supabase usa 6 por padrão (hoje o app aceita 4). Ajustar a validação
-  da UI para seguir a configuração do projeto.
-- [ ] Remover `desktop/electron/services/auth.service.ts`, `auth.ipc.ts` (versão SQL),
-  `mobile/src/data/repositories/auth.ts`, `scripts/reset-password.mjs` e a dependência
-  `scrypt-js` do mobile.
-- [ ] Tela de Perfil passa a editar `profiles` (nome, telefone, avatar) e e-mail/senha pelo Auth.
+- [x] Cadastro, login, logout (`scope: 'local'`: sai só deste aparelho) e "esqueci a
+  senha". O nome vai em `options.data.name`.
+- [x] Senha mínima de 6 (padrão do Supabase). Se o projeto exigir mais, o servidor recusa
+  com a própria mensagem, mapeada para `VALIDATION`.
+- [x] Projeto com "Confirm email" ligado: o cadastro avisa que é preciso confirmar
+  (`NOT_AUTHENTICATED`, `reason: email_confirmation`).
+- [x] Erros com código próprio: `INVALID_CREDENTIALS`, `EMAIL_IN_USE`, `OFFLINE`,
+  `FORBIDDEN`, `INVITE_INVALID`, `PAIRING_*`.
+- [x] Perfil: ler e editar `profiles` (nome, telefone, avatar) e trocar a senha.
+- [ ] Remover `auth.service.ts`, `auth.ipc.ts`, `mobile/src/data/repositories/auth.ts`,
+  `scripts/reset-password.mjs` e o `scrypt-js` → Etapas 6 e 8 (os apps ainda usam).
 
 ### Uso offline
-- [ ] O primeiro login num dispositivo exige internet (cria a sessão e faz a carga inicial).
-- [ ] Depois disso, abrir o app offline usa a sessão salva e o SQLite local, mesmo com o
-  access token expirado. O refresh acontece quando a rede volta. Se o refresh falhar por
-  sessão revogada, o app mantém o outbox, pede login de novo e só então sincroniza.
-- [ ] Criar família e aceitar convite exigem internet (são RPCs). A UI desabilita essas ações
-  offline com explicação.
+- [x] `AccountSession.resume()` usa a sessão guardada no store seguro (chave fixa
+  `myfinances.auth`), mesmo sem rede e com o token expirado. A lista de famílias vem do
+  SQLite local.
+- [x] Abrir offline é rápido: com `online: false` não tenta a rede, e sem esse aviso a
+  tentativa tem limite de 4 s. O supabase-js repete GETs que falham por rede e, sem o
+  limite, isso levava 7 s.
+- [x] Sair com pendências no outbox exige `force` (`CONFLICT` com a contagem).
+- [ ] UI desabilita criar família e aceitar convite offline → Etapas 6 e 8.
 
 ### Família
-- [ ] Logo após criar a família, o onboarding oferece **"Importar meu banco da v1"** ou
-  **"Começar do zero"** (a importação está detalhada na Etapa 9).
-- [ ] Depois do login, sem família: tela "Criar família" (`rpc('create_family')`) ou "Tenho
-  convite" (`rpc('accept_family_invite')`).
-- [ ] Usuário já com família pode **criar outra** ou **aceitar convite de outra** pelo menu
-  do seletor.
-- [ ] Com uma ou mais famílias: **seletor de família** no topo do layout (desktop:
-  `AppLayout`; mobile: header das tabs). A família ativa fica salva por dispositivo.
-- [ ] `FamilyContext` (desktop e mobile) expõe `familyId`, `role` e `members`, e os use cases
-  recebem isso.
-- [ ] Tela **Membros** (OWNER/ADMIN):
-  - listar membros com papel;
-  - **Convidar**: gera token via `rpc('create_family_invite')` e mostra o **código de
-    conexão** completo (URL + key + token) para copiar, com QR. Validade de 7 dias e uso único;
-  - desativar ou reativar membro (`rpc('set_member_active')`). O histórico do membro continua
-    somando na família.
-- [ ] Mensagens para os erros das RPCs: `invalid_or_expired_invite`, `forbidden`,
-  `cannot_change_self`.
+- [x] `CreateFamily`: RPC, seleciona a família e cria as 18 categorias padrão (que sobem no
+  próximo sync).
+- [x] `JoinFamily`: aceita o código `mf1.` (do QR ou colado) ou só o token. Recusa o
+  código de outro banco (`INVALID_CONNECTION`, `reason: other_project`).
+- [x] `CreateFamilyInvite`: gera o código de convite completo (URL + key + família +
+  quem convidou + token).
+- [x] Várias famílias, com a ativa salva por aparelho e usuário (`ActiveFamilyStore`).
+- [x] Membros: listar (banco local), desativar e reativar.
+- [ ] Telas (seletor, Membros, Convidar com QR, onboarding com "Importar da v1") →
+  Etapas 6 e 8.
 
-### Conectar celular por QR Code (pareamento + convite)
-Especificação completa: [[fluxo-conectar-celular|Conectar celular por QR]].
-- [ ] Aplicar `supabase/migrations/20261107000004_device_link.sql`: `device_pairings`,
-  `user_devices`, `create_device_link`, `resolve_device_pairing`, `register_device` e
+### Conectar celular por QR Code
+- [x] `CreateDeviceLink` (QR com pareamento e, se OWNER/ADMIN, convite),
+  `ListPendingPairings`, `ResolvePairing`, `ScanDeviceLink`, `WaitPairingApproval` (a
+  cada 2 s, com cancelamento), `CompletePairing`, `RegisterDevice`, `ListDevices`
+  (marca o aparelho atual) e `RevokeDevice`.
+- [x] Fallback sem a Edge Function: "Sou eu" vira login com o e-mail preenchido.
+- [x] Validações da Etapa 1 confirmadas: `generateLink` + `verifyOtp`, claim `session_id` e
   `revoke_device`.
-- [ ] Edge Function `pair-device` em `supabase/functions/`,
-  publicada com `--no-verify-jwt`; ações `ping`, `scan` e `status`.
-- [ ] Use cases no core: `CreateDeviceLink` (computador), `ScanDeviceLink` /
-  `WaitPairingApproval` / `CompletePairing` (celular), `ResolvePairing`, `RegisterDevice`,
-  `ListDevices`, `RevokeDevice`.
-- [ ] **Caminho "Sou eu":** `scan` → aguarda aprovação (polling de 2 s, até expirar) →
-  `verifyOtp({ token_hash, type: 'email' })` → `register_device` → carga inicial.
-- [ ] **Caminho "Sou outra pessoa":** criar conta ou fazer login → `accept_family_invite(invite)`
-  → carga inicial. Se o QR não tem `invite` (quem gerou não é OWNER/ADMIN), essa opção não
-  aparece.
-- [ ] **Fallback sem Edge Function** (`ping` responde 404): "Sou eu" vira login com o e-mail
-  preenchido.
-- [ ] Todo aparelho chama `register_device` após o login (inclusive o computador), para
-  aparecer em **Perfil → Aparelhos conectados**, com a opção de desconectar.
-- [ ] Validar na Etapa 1: `generateLink({ type: 'magiclink' })` + `verifyOtp` com
-  `type: 'email'` cria sessão sem enviar e-mail; `auth.jwt() ->> 'session_id'` existe no JWT;
-  `delete from auth.sessions` derruba o refresh do aparelho.
+- [ ] Telas (QR com contagem regressiva, diálogo "Permitir" via Realtime, Aparelhos
+  conectados, leitor de QR) → Etapas 6 e 8.
+
+### Testes
+- [x] 16 casos de integração (`tests/account.integration.ts`), com `yarn functions:serve`
+  rodando:
+  - cadastro;
+  - erros de cadastro e login;
+  - perfil;
+  - reabrir offline;
+  - sair com pendências;
+  - família com categorias padrão vista igual pelo convidado;
+  - não convidado não vê nada;
+  - convite usado, de outro banco ou só token reaproveitado;
+  - **convite aceito ao mesmo tempo por duas pessoas** (só uma entra; pendência da Etapa 1);
+  - permissões de OWNER/MEMBER;
+  - várias famílias;
+  - "Sou eu" completo até sincronizar e desconectar;
+  - "Sou eu" negado;
+  - "Sou outra pessoa";
+  - QR de MEMBER sem convite;
+  - fallback sem a função.
 
 ## Fluxo de entrada de um membro novo
 

@@ -61,6 +61,19 @@ credenciais.
 - [ ] Perfil → **Conexão**: ver o projeto, testar, trocar (com logout) e esquecer.
 - [ ] supabase-js no processo main com `auth.storage = new SafeStorageKeyValueStore()`.
 
+## Herdado da Etapa 5
+
+- [ ] Login, cadastro e "esqueci a senha" com `createAccount` (`signIn`, `signUp`,
+  `requestPasswordReset`); ao abrir, `session.resume({ online })`.
+- [ ] Onboarding sem família: Criar família / Tenho convite; depois de criar, "Importar
+  meu banco da v1" ou "Começar do zero" (Etapa 9).
+- [ ] Seletor de família no `AppLayout` (criar outra, aceitar convite) e `FamilyContext`.
+- [ ] Tela Membros: lista, Convidar (código + QR), desativar e reativar.
+- [ ] Perfil: dados, senha, Conectar celular (QR com contagem regressiva, regenera ao
+  expirar), diálogo "Permitir" via Realtime em `device_pairings`, Aparelhos conectados.
+- [ ] `RegisterDevice` após o login (plataforma `desktop`).
+- [ ] Remover `auth.service.ts`, `auth.ipc.ts` (SQL) e `scripts/reset-password.mjs`.
+
 ## Pronto quando
 
 - Todas as telas atuais funcionam **com a rede desligada**, e as alterações sobem ao religar.
