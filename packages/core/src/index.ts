@@ -27,3 +27,5 @@ export { createSqlJsAdapter } from './db/sqljsAdapter';
 export * from './sync/remote';
 export * from './sync/syncEngine';
 export { deterministicUuid } from './domain/deterministicId';
+export * from './connection/checkConnection';
+export * from './connection/storage';

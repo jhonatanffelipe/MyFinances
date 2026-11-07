@@ -7,7 +7,7 @@ aliases:
   - "Etapa 4"
   - "Conexão BYO"
 etapa: 4
-status: pendente
+status: concluída
 plano: "[[README|Plano v2.0.0]]"
 depende_de:
   - "[[etapa-02-pacote-core]]"
@@ -34,35 +34,58 @@ flowchart TD
     S -- não --> X[Mostra a migração a rodar]
 ```
 
+## Divisão do trabalho
+
+As telas dependem de os apps já rodarem sobre o core, e isso só acontece nas Etapas 6
+(desktop) e 8 (mobile). Por isso esta etapa entrega a **lógica e o armazenamento**, testados
+contra o Supabase local, e as telas entram junto com a troca de cada app:
+
+| Peça | Onde | Status |
+|---|---|---|
+| Verificação da conexão (`checkConnection`) | `packages/core/src/connection/checkConnection.ts` | ✅ |
+| Código `mf1.` (QR e convite), recusa da chave secreta | `packages/core/src/connection/connection.ts` (Etapa 2) | ✅ |
+| Conexão salva (`ConnectionRepository`), nome do banco local | `packages/core/src/connection/storage.ts` | ✅ |
+| Store cifrado do desktop (`safeStorage`, gravação atômica) | `desktop/electron/connection/secureStore.ts` | ✅ |
+| Store seguro do mobile (`expo-secure-store` em pedaços de 1,8 KB) | `mobile/src/connection/secureStore.ts` | ✅ |
+| Tela Conectar e Perfil → Conexão no desktop | Etapa 6 | pendente |
+| Tela Conectar (com Ler QR Code) e Perfil → Conexão no mobile | Etapa 8 | pendente |
+
 ## Tarefas
 
-- [ ] Tela **Conectar** com dois caminhos:
-  - **Criar meu banco (dono):** campos `Project URL` e `Publishable key`, com link "onde acho
-    isso?" (Supabase → Project Settings → API) e botão "Copiar script de instalação"
-    (`setup.sql` da release).
-  - **Ler QR Code** (celular, ação principal): lê o QR de "Conectar celular" do computador e
-    segue o [[fluxo-conectar-celular|fluxo de conexão do celular]].
-  - **Entrar com código de convite (membro):** um campo para colar o código.
-- [ ] **Código de conexão** (mesmo formato no QR e no texto colado): `mf1.` + base64url de JSON
-  `{ v, url, key, family, by, pair, invite }`, especificado no
-  [[fluxo-conectar-celular#Conteúdo do QR|fluxo de conexão do celular]].
-  - Valida que `url` é `https://<ref>.supabase.co` (ou domínio custom com `https`) e que a
-    key **não** é secret/service_role. Rejeita `sb_secret_...` e JWT com
-    `role = service_role`, mostrando um alerta explicando o risco.
-- [ ] **Validação ao salvar** (em ordem, cada falha com mensagem própria):
-  1. URL acessível (erro de rede ≠ URL errada);
-  2. key aceita pelo projeto;
-  3. projeto **pausado** (plano free): mensagem "reative em supabase.com/dashboard";
-  4. `rpc('app_schema_version')` inexistente: "rode o script de instalação";
-  5. versão < `MIN_SCHEMA_VERSION`: "rode as migrações X..Y".
-- [ ] **Armazenamento:**
-  - Desktop: config em `userData` (substitui `dbFolder`/`dbFilePath` de
-    `desktop/electron/config.ts`). Sessão e refresh token cifrados com `safeStorage` do
-    Electron, via `storage` customizado do supabase-js no processo main.
-  - Mobile: `expo-secure-store` para URL, key e sessão.
-- [ ] Em **Perfil → Conexão**: ver o projeto conectado, testar, trocar (com logout) e
-  "esquecer este banco".
-- [ ] Nenhuma URL ou key de exemplo real no código nem nos testes (usar o stack local).
+- [x] **Validação ao salvar**, em ordem, cada falha com o próprio código de `AppError`:
+  1. formato da URL e da chave: a secreta (`sb_secret_...` ou JWT `service_role`) é
+     recusada **antes de qualquer acesso à rede** (`SECRET_KEY_REJECTED`);
+  2. projeto inacessível: com internet → `INVALID_CONNECTION` (`reason: unreachable`), sem
+     internet → `OFFLINE` (sonda em `api.supabase.com`);
+  3. chave recusada pelo projeto (401/403/PGRST301) → `INVALID_CONNECTION` (`reason: key`);
+  4. projeto pausado (HTTP 540 ou mensagem com "paused"/"restore") → `PROJECT_PAUSED`;
+  5. `app_schema_version` inexistente (PGRST202) → `SCHEMA_MISSING`;
+  6. versão < `MIN_SCHEMA_VERSION` → `SCHEMA_OUTDATED`;
+  7. 5xx → `OFFLINE`; resposta que não é número → `INVALID_CONNECTION` (`reason: not_supabase`).
+- [x] **Armazenamento:** `KeyValueStore` no formato do `storage` do supabase-js, então o
+  mesmo store guarda a conexão **e** a sessão (refresh token).
+  - Desktop: JSON em `userData/secure-store.json` com cada valor cifrado pelo
+    `safeStorage`; recusa gravar se a criptografia do sistema estiver indisponível.
+  - Mobile: `expo-secure-store`, com valores grandes divididos em pedaços (o limite é
+    ~2 KB e a sessão passa disso). O contador de pedaços é gravado por último, então uma
+    gravação interrompida não é lida pela metade.
+  - A conexão salva é revalidada ao carregar: conteúdo inválido ou chave secreta são
+    descartados.
+- [x] Banco local: `localDatabaseName(url, userId)` → `<projectRef>-<userId>.sqlite`.
+- [x] Nenhuma URL ou chave real no código: os testes usam o stack local
+  (`supabase status`).
+- [x] Testes: 12 unitários (`fetch` falso cobrindo cada ramo) e 4 de integração (projeto
+  local com publishable key e anon JWT, JWT com assinatura falsa, porta fechada com e sem
+  internet, sessão do supabase-js que sobrevive a "fechar e reabrir").
+- [ ] Telas → Etapas 6 e 8 (ver a tabela acima).
+
+## A validar quando houver um projeto pausado
+
+- A resposta exata do Supabase para projeto pausado. O código aceita HTTP 540 e mensagens
+  com "paused"/"restore". Na primeira vez que um projeto de teste pausar, chamar
+  `checkConnection` contra ele e conferir o código e a mensagem.
+- Localmente, uma publishable key inválida é aceita (o gateway local não valida esse
+  formato). Na nuvem a resposta é 401, e o código já trata esse caso.
 
 ## Pronto quando
 

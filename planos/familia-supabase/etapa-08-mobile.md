@@ -42,6 +42,13 @@ Supabase), sem OneDrive. Pode rodar em paralelo às Etapas 6–7, depois da 5.
   **fica**.
 - [ ] Migrar `mobile/tests` para o core.
 
+## Herdado da Etapa 4
+
+- [ ] Tela **Conectar** com **Ler QR Code** como ação principal, mais Criar meu banco e
+  Tenho um código de convite. Usa `checkConnection` e `decodeConnectionCode`.
+- [ ] Perfil → **Conexão**: ver o projeto, testar, trocar (com logout) e esquecer.
+- [ ] supabase-js com `auth.storage = mobileSecureStore`.
+
 ## Pronto quando
 
 - Um lançamento feito no celular em modo avião aparece no desktop do outro membro assim que o

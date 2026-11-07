@@ -53,6 +53,14 @@ credenciais.
   `DbSyncContext` atual.
 - [ ] Ajustar o `README` do desktop.
 
+## Herdado da Etapa 4
+
+- [ ] Tela **Conectar** (substitui `db-setup`): Criar meu banco (URL + publishable key, link
+  "onde acho isso?", botão "Copiar script de instalação") e Tenho um código de convite.
+  Usa `checkConnection` e mostra a mensagem de cada `AppError`.
+- [ ] Perfil → **Conexão**: ver o projeto, testar, trocar (com logout) e esquecer.
+- [ ] supabase-js no processo main com `auth.storage = new SafeStorageKeyValueStore()`.
+
 ## Pronto quando
 
 - Todas as telas atuais funcionam **com a rede desligada**, e as alterações sobem ao religar.

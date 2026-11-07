@@ -13,7 +13,7 @@ criado: 2026-11-07
 # Plano: MyFinances Família + Supabase próprio (BYO)
 
 > [!info] Status
-> **Em implementação** no branch `v2.0.0` · Etapas 1 a 3 concluídas · Criado em 2026-11-07
+> **Em implementação** no branch `v2.0.0` · Etapas 1 a 4 concluídas · Criado em 2026-11-07
 >
 > **Versões:** a versão atual (SQLite + OneDrive) é a **v1.0.0**. Este plano entrega a
 **v2.0.0** (família + Supabase + funcionamento offline com SQLite local).
@@ -113,7 +113,7 @@ Fluxo de conexão do celular por QR: [[fluxo-conectar-celular|Conectar celular p
 | 1 ✅ | [[etapa-01-fundacao-supabase\|Fundação Supabase]] | Schema, RLS, RPCs, Supabase local em Docker e testes de RLS | — |
 | 2 ✅ | [[etapa-02-pacote-core\|Pacote core compartilhado]] | `packages/core` com schema local, repositórios SQL (vindos do mobile) e use cases | 1 |
 | 3 ✅ | [[etapa-03-sincronizacao\|Sincronização offline-first]] | Outbox, `SyncEngine`, push/pull, conflitos e testes de convergência | 2 |
-| 4 | [[etapa-04-conexao-byo\|Conexão BYO (onboarding)]] | Tela "Conectar ao seu Supabase", validação e armazenamento seguro | 2 |
+| 4 ✅ | [[etapa-04-conexao-byo\|Conexão BYO (onboarding)]] | Tela "Conectar ao seu Supabase", validação e armazenamento seguro | 2 |
 | 5 | [[etapa-05-auth-familias\|Autenticação e famílias]] | Cadastro/login (com uso offline), criar família, convidar, trocar de família, **conectar celular por QR** e aparelhos conectados | 3, 4 |
 | 6 | [[etapa-06-desktop\|Desktop local-first]] | Handlers IPC sobre o core, indicador de sync, sem OneDrive | 5 |
 | 7 | [[etapa-07-totalizacao-familia\|Totalização da família]] | Dashboard local com visão Família / por membro, transferências e tempo real | 6 |
