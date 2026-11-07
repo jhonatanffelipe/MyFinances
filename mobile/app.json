@@ -41,7 +41,15 @@
       "supportsTablet": false
     },
     "extra": {
-      "microsoftClientId": "1cc0f43a-2fc8-47b7-92be-bfef3f446139"
+      "microsoftClientId": "1cc0f43a-2fc8-47b7-92be-bfef3f446139",
+      "router": {
+        "asyncRoutes": {
+          "web": true
+        }
+      },
+      "eas": {
+        "projectId": "e663eeb3-696f-48c3-8289-c54b8ab6490c"
+      }
     }
   }
 }
