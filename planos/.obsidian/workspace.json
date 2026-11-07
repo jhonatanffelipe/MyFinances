@@ -83,7 +83,7 @@
       }
     ],
     "direction": "horizontal",
-    "width": 300
+    "width": 312.96875
   },
   "right": {
     "id": "03da56b7e09413aa",
@@ -191,6 +191,7 @@
   "active": "4e22243ad3409798",
   "lastOpenFiles": [
     "familia-supabase/etapa-01-fundacao-supabase.md",
+    "familia-supabase/etapa-02-pacote-core.md",
     "familia-supabase/README.md",
     "familia-supabase/fluxo-conectar-celular.md"
   ]
