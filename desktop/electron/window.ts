@@ -29,12 +29,14 @@ export function getMainWindow(): BrowserWindow | null {
 }
 
 /**
- * No macOS o ícone exibido no Dock e no Cmd+Tab é o do app (em dev, o Electron.app),
- * e não o da janela. Por isso definimos explicitamente o ícone do Dock.
+ * No macOS o ícone do Dock e do Cmd+Tab é o do bundle, não o da janela. No app empacotado ele
+ * vem de build/icon.icns (CFBundleIconFile) e aparece também com o app fechado, então não é
+ * trocado em tempo de execução. Em dev o bundle é o Electron.app, por isso o ícone é aplicado aqui.
  */
 export function applyDockIcon() {
-  if (process.platform !== 'darwin' || !app.dock) return;
-  const iconPath = getAppIcon();
+  if (process.platform !== 'darwin' || !app.dock || app.isPackaged) return;
+  const macIcon = path.join(process.cwd(), 'build/icon.png');
+  const iconPath = fs.existsSync(macIcon) ? macIcon : getAppIcon();
   if (!iconPath) return;
   try {
     const img = nativeImage.createFromPath(iconPath);
