@@ -3,11 +3,13 @@
 Este guia é para quem vai usar o MyFinances com a própria família. Você cria um banco grátis
 no Supabase (os dados ficam só com você), instala o app no computador e conecta os celulares.
 
-Tempo estimado: 15 minutos. Você vai precisar dos arquivos da release:
+Tempo estimado: 15 minutos. Baixe os arquivos na página da versão em
+[Releases](https://github.com/jhonatanffelipe/MyFinances/releases):
 
 | Arquivo | Para quê |
 |---|---|
-| `MyFinances-Setup-2.0.0.exe` | Instalador do Windows |
+| `MyFinances-Setup-2.0.0.exe` | Instalador do Windows (64 bits) |
+| `MyFinances-2.0.0-arm64.dmg` | Instalador do macOS (Apple Silicon: M1 ou mais novo) |
 | `MyFinances-2.0.0.apk` | App Android |
 | `setup.sql` | Script que cria o banco no Supabase |
 | `pair-device/index.ts` | (Opcional) Conectar o celular pelo QR sem digitar senha |
@@ -72,10 +74,15 @@ pede a sua senha uma vez.
 
 ## 5. Instalar no computador
 
-1. Rode o `MyFinances-Setup-2.0.0.exe`.
-
-   O Windows pode mostrar "O Windows protegeu o computador", porque o instalador não é
-   assinado. Clique em **Mais informações → Executar assim mesmo**.
+1. Instale o app:
+   - **Windows:** rode o `MyFinances-Setup-2.0.0.exe`. O Windows pode mostrar "O Windows
+     protegeu o computador", porque o instalador não é assinado. Clique em
+     **Mais informações → Executar assim mesmo**.
+   - **macOS:** abra o `MyFinances-2.0.0-arm64.dmg` e arraste o MyFinances para
+     **Aplicativos**. Como o app não é assinado pela Apple, na primeira vez o macOS bloqueia a
+     abertura: vá em **Ajustes do Sistema → Privacidade e Segurança**, role até o aviso do
+     MyFinances e clique em **Abrir Mesmo Assim**. Se aparecer "está danificado", rode no
+     Terminal `xattr -cr /Applications/MyFinances.app` e abra de novo.
 2. Na tela **Conectar ao seu banco**, aba **Criar meu banco**, cole a **Project URL** e a
    **Publishable key**.
 3. Clique em **Testar conexão** e depois em **Conectar**.
@@ -168,7 +175,7 @@ Depois, conecte os aparelhos ao projeto novo (Perfil → Banco conectado → **T
 
 1. Leia o `CHANGELOG.md` da versão. Se ele disser **migração de banco obrigatória**, rode no
    **SQL Editor** os arquivos de `migrations/` indicados (ou o `setup.sql` completo).
-2. Instale o `.exe` e o `.apk` novos por cima dos antigos. Os dados locais são mantidos.
+2. Instale o `.exe` / `.dmg` e o `.apk` novos por cima dos antigos. Os dados locais são mantidos.
 
 Se o banco estiver desatualizado, o app avisa qual script rodar antes de continuar.
 

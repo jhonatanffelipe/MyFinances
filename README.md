@@ -5,7 +5,7 @@ com o **seu próprio projeto Supabase**:
 
 | Projeto | Pasta | Tecnologia |
 |---|---|---|
-| **Desktop (Windows)** | [`desktop/`](desktop/README.md) | Electron + React + MUI + sql.js |
+| **Desktop (Windows e macOS)** | [`desktop/`](desktop/README.md) | Electron + React + MUI + sql.js |
 | **Mobile (Android)** | [`mobile/`](mobile/README.md) | React Native (Expo) + expo-sqlite |
 | **Core compartilhado** | `packages/core/` | TypeScript puro: schema local, repositórios, use cases e `SyncEngine` |
 | **Banco** | `supabase/` | Migrações SQL (RLS), `setup.sql` e a Edge Function `pair-device` |
@@ -51,13 +51,10 @@ cd mobile && yarn install && yarn android
 Ao mudar qualquer arquivo em `supabase/migrations/`, rode `yarn db:bundle` para gerar de novo
 o `supabase/setup.sql`.
 
-## Release
+## Versões e instaladores
 
-```bash
-cd desktop && yarn build:win     # release/MyFinances-Setup-x.y.z.exe
-cd mobile && yarn eas:apk        # APK pelo EAS (baixe e coloque em release/vX.Y.Z/)
-yarn release:assets              # junta setup.sql, migrations/, pair-device, guia e CHANGELOG
-```
-
-`yarn release:assets` monta `release/vX.Y.Z/` com tudo o que vai para o GitHub Release
-(o `.exe` é copiado se já existir em `desktop/release/`).
+Baixe os instaladores (Windows, macOS e Android) em
+[Releases](https://github.com/jhonatanffelipe/MyFinances/releases). A pasta
+[`versions/`](versions/README.md) guarda, por versão, o `setup.sql`, as migrações, a Edge
+Function, o guia e as notas, além do passo a passo para montar uma versão nova
+(`yarn build:win`, `yarn build:mac`, `yarn eas:apk` e `yarn release:assets`).

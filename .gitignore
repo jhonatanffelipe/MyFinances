@@ -46,3 +46,8 @@ Thumbs.db
 .expo/
 mobile/android/
 mobile/ios/
+
+# Instaladores da release: vão para o GitHub Release (passam de 100 MB)
+*.apk
+versions/**/*.exe
+versions/**/*.dmg
